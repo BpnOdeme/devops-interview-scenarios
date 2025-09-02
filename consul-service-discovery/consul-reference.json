@@ -1,0 +1,192 @@
+{
+  "// Server Configuration": "Production-ready Consul server config",
+  "datacenter": "dc1",
+  "data_dir": "/opt/consul/data",
+  "log_level": "INFO",
+  "log_file": "/var/log/consul/",
+  "log_rotate_duration": "24h",
+  "node_name": "consul-server-1",
+  "server": true,
+  "bootstrap_expect": 3,
+  "encrypt": "generate with: consul keygen",
+  
+  "// UI Configuration": "Web interface settings",
+  "ui_config": {
+    "enabled": true,
+    "metrics_provider": "prometheus",
+    "metrics_proxy": {
+      "base_url": "http://prometheus:9090"
+    }
+  },
+  
+  "// Network Configuration": "Addresses and ports",
+  "client_addr": "0.0.0.0",
+  "bind_addr": "{{ GetInterfaceIP \"eth0\" }}",
+  "advertise_addr": "{{ GetInterfaceIP \"eth0\" }}",
+  "ports": {
+    "dns": 8600,
+    "http": 8500,
+    "https": -1,
+    "grpc": 8502,
+    "serf_lan": 8301,
+    "serf_wan": 8302,
+    "server": 8300
+  },
+  
+  "// Connect Configuration": "Service mesh settings",
+  "connect": {
+    "enabled": true,
+    "ca_provider": "consul",
+    "ca_config": {
+      "leaf_cert_ttl": "72h",
+      "rotation_period": "2160h"
+    }
+  },
+  
+  "// ACL Configuration": "Security settings",
+  "acl": {
+    "enabled": true,
+    "default_policy": "allow",
+    "enable_token_persistence": true,
+    "tokens": {
+      "agent": "agent-token-here",
+      "default": "default-token-here"
+    }
+  },
+  
+  "// Performance Tuning": "Production optimizations",
+  "performance": {
+    "raft_multiplier": 1,
+    "leave_drain_time": "5s",
+    "rpc_hold_timeout": "7s"
+  },
+  
+  "// Telemetry": "Monitoring configuration",
+  "telemetry": {
+    "prometheus_retention_time": "60s",
+    "disable_hostname": true,
+    "metrics_prefix": "consul"
+  },
+  
+  "// Autopilot": "Cluster management",
+  "autopilot": {
+    "cleanup_dead_servers": true,
+    "last_contact_threshold": "200ms",
+    "max_trailing_logs": 250,
+    "server_stabilization_time": "10s"
+  },
+  
+  "// Service Registration Examples": "Different registration patterns",
+  
+  "// Basic Service": {
+    "service": {
+      "name": "web",
+      "tags": ["primary", "v1"],
+      "port": 8080,
+      "check": {
+        "http": "http://localhost:8080/health",
+        "interval": "10s"
+      }
+    }
+  },
+  
+  "// Service with Multiple Checks": {
+    "service": {
+      "name": "api",
+      "port": 3000,
+      "checks": [
+        {
+          "http": "http://localhost:3000/health",
+          "interval": "10s"
+        },
+        {
+          "tcp": "localhost:3000",
+          "interval": "5s"
+        }
+      ]
+    }
+  },
+  
+  "// Connect-Enabled Service": {
+    "service": {
+      "name": "database",
+      "port": 5432,
+      "connect": {
+        "sidecar_service": {
+          "port": 20000,
+          "proxy": {
+            "upstreams": [
+              {
+                "destination_name": "cache",
+                "local_bind_port": 6379
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  
+  "// Health Check Types": "Various check configurations",
+  
+  "http_check": {
+    "http": "http://localhost:8080/health",
+    "method": "GET",
+    "header": {
+      "X-Custom-Header": ["value"]
+    },
+    "interval": "10s",
+    "timeout": "5s"
+  },
+  
+  "tcp_check": {
+    "tcp": "localhost:3306",
+    "interval": "10s",
+    "timeout": "5s"
+  },
+  
+  "script_check": {
+    "args": ["/usr/local/bin/check.sh"],
+    "interval": "30s",
+    "timeout": "10s"
+  },
+  
+  "ttl_check": {
+    "ttl": "30s",
+    "deregister_critical_service_after": "90s"
+  },
+  
+  "grpc_check": {
+    "grpc": "localhost:50051",
+    "grpc_use_tls": true,
+    "interval": "10s"
+  },
+  
+  "// Prepared Query Example": "Dynamic service discovery",
+  "prepared_query": {
+    "name": "web-query",
+    "service": {
+      "service": "web",
+      "tags": ["primary"],
+      "failover": {
+        "nearest_n": 3,
+        "datacenters": ["dc2", "dc3"]
+      }
+    }
+  },
+  
+  "// Watch Configuration": "Real-time updates",
+  "watches": [
+    {
+      "type": "service",
+      "service": "web",
+      "handler_type": "script",
+      "args": ["/usr/bin/update-nginx.sh"]
+    },
+    {
+      "type": "key",
+      "key": "config/database",
+      "handler": "/usr/bin/update-config.sh"
+    }
+  ]
+}

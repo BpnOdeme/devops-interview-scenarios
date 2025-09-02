@@ -1,0 +1,60 @@
+{
+  "title": "Consul Service Discovery Troubleshooting",
+  "description": "Fix broken Consul service discovery, registration, health checks, and service mesh configuration",
+  "difficulty": "intermediate",
+  "time": "30 minutes",
+  "details": {
+    "intro": {
+      "text": "intro.md",
+      "background": "setup.sh",
+      "foreground": "foreground.sh"
+    },
+    "steps": [
+      {
+        "title": "Analyze Consul Issues",
+        "text": "step1.md",
+        "verify": "verify-step1.sh"
+      },
+      {
+        "title": "Fix Consul Server",
+        "text": "step2.md",
+        "verify": "verify-step2.sh"
+      },
+      {
+        "title": "Fix Service Registration",
+        "text": "step3.md",
+        "verify": "verify-step3.sh"
+      },
+      {
+        "title": "Fix Health Checks",
+        "text": "step4.md",
+        "verify": "verify-step4.sh"
+      },
+      {
+        "title": "Test Service Discovery",
+        "text": "step5.md",
+        "verify": "verify-step5.sh"
+      }
+    ],
+    "finish": {
+      "text": "finish.md"
+    },
+    "assets": {
+      "host01": [
+        {
+          "file": "consul-reference.json",
+          "target": "/tmp/reference/"
+        }
+      ]
+    }
+  },
+  "environment": {
+    "uilayout": "terminal",
+    "uieditorpath": "/root",
+    "hideintro": false,
+    "hidefinish": false
+  },
+  "backend": {
+    "imageid": "ubuntu"
+  }
+}

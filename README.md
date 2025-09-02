@@ -47,6 +47,17 @@ This repository contains interactive DevOps interview scenarios designed to run 
   - State file recovery
   - Infrastructure as Code best practices
 
+### 5. Consul Service Discovery Troubleshooting
+- **Path**: `/consul-service-discovery`
+- **Difficulty**: Intermediate
+- **Duration**: 30 minutes
+- **Skills Tested**:
+  - Consul server configuration
+  - Service registration and discovery
+  - Health check configuration
+  - DNS and API interfaces
+  - Service mesh concepts
+
 ## How to Use These Scenarios
 
 ### For Killercoda Integration
