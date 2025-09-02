@@ -1,0 +1,271 @@
+// Reference Jenkins Pipeline - Best Practices Example
+
+pipeline {
+    agent any
+    
+    // Environment variables
+    environment {
+        // Docker configuration
+        DOCKER_REGISTRY = 'docker.io'
+        DOCKER_NAMESPACE = 'mycompany'
+        DOCKER_CREDENTIALS = credentials('docker-hub-credentials')
+        
+        // Application configuration
+        APP_NAME = 'my-application'
+        APP_VERSION = "${env.BUILD_NUMBER}"
+        
+        // Build configuration
+        MAVEN_OPTS = '-Xmx1024m -XX:MaxPermSize=256m'
+        JAVA_HOME = '/usr/lib/jvm/java-11-openjdk'
+        
+        // Deployment configuration
+        DEPLOY_ENV = "${env.BRANCH_NAME == 'master' ? 'production' : 'staging'}"
+    }
+    
+    // Build options
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timestamps()
+        timeout(time: 1, unit: 'HOURS')
+        disableConcurrentBuilds()
+    }
+    
+    // Build triggers
+    triggers {
+        pollSCM('H/5 * * * *')
+        githubPush()
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out source code...'
+                checkout scm
+                
+                script {
+                    // Get commit info
+                    env.GIT_COMMIT = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
+                    env.GIT_BRANCH = sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
+                }
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                echo "Building ${APP_NAME} version ${APP_VERSION}..."
+                
+                // Maven build
+                sh '''
+                    mvn clean compile package \
+                        -DskipTests=false \
+                        -Dmaven.test.failure.ignore=false
+                '''
+                
+                // Docker build
+                script {
+                    docker.build("${APP_NAME}:${APP_VERSION}")
+                    docker.build("${APP_NAME}:latest")
+                }
+            }
+        }
+        
+        stage('Test') {
+            parallel {
+                stage('Unit Tests') {
+                    steps {
+                        echo 'Running unit tests...'
+                        sh 'mvn test'
+                        junit 'target/surefire-reports/*.xml'
+                    }
+                }
+                
+                stage('Integration Tests') {
+                    steps {
+                        echo 'Running integration tests...'
+                        sh 'mvn verify -DskipUnitTests=true'
+                        junit 'target/failsafe-reports/*.xml'
+                    }
+                }
+                
+                stage('Code Quality') {
+                    steps {
+                        echo 'Checking code quality...'
+                        sh 'mvn checkstyle:check'
+                        sh 'mvn pmd:check'
+                    }
+                }
+            }
+        }
+        
+        stage('Security Scan') {
+            parallel {
+                stage('Dependency Check') {
+                    steps {
+                        echo 'Checking dependencies for vulnerabilities...'
+                        sh 'mvn dependency-check:check'
+                        publishHTML(target: [
+                            reportDir: 'target',
+                            reportFiles: 'dependency-check-report.html',
+                            reportName: 'Dependency Check Report'
+                        ])
+                    }
+                }
+                
+                stage('SonarQube Analysis') {
+                    steps {
+                        echo 'Running SonarQube analysis...'
+                        withSonarQubeEnv('SonarQube') {
+                            sh '''
+                                mvn sonar:sonar \
+                                    -Dsonar.projectKey=${APP_NAME} \
+                                    -Dsonar.projectName=${APP_NAME} \
+                                    -Dsonar.projectVersion=${APP_VERSION}
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Publish Artifacts') {
+            steps {
+                echo 'Publishing artifacts...'
+                
+                // Archive JAR files
+                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                
+                // Publish test results
+                publishHTML(target: [
+                    reportDir: 'target/site',
+                    reportFiles: 'index.html',
+                    reportName: 'Maven Site'
+                ])
+            }
+        }
+        
+        stage('Docker Push') {
+            when {
+                anyOf {
+                    branch 'master'
+                    branch 'develop'
+                    tag pattern: "v\\d+\\.\\d+\\.\\d+", comparator: "REGEXP"
+                }
+            }
+            steps {
+                echo "Pushing Docker images to ${DOCKER_REGISTRY}..."
+                
+                script {
+                    docker.withRegistry("https://${DOCKER_REGISTRY}", 'docker-hub-credentials') {
+                        docker.image("${APP_NAME}:${APP_VERSION}").push()
+                        docker.image("${APP_NAME}:latest").push()
+                        
+                        if (env.BRANCH_NAME == 'master') {
+                            docker.image("${APP_NAME}:${APP_VERSION}").push('stable')
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy') {
+            when {
+                branch 'master'
+            }
+            steps {
+                echo "Deploying to ${DEPLOY_ENV}..."
+                
+                script {
+                    // Deployment logic
+                    if (DEPLOY_ENV == 'production') {
+                        input message: 'Deploy to production?', ok: 'Deploy'
+                        
+                        // Deploy to production
+                        sh '''
+                            echo "Deploying version ${APP_VERSION} to production"
+                            # kubectl set image deployment/${APP_NAME} ${APP_NAME}=${DOCKER_REGISTRY}/${APP_NAME}:${APP_VERSION}
+                            # kubectl rollout status deployment/${APP_NAME}
+                        '''
+                    } else {
+                        // Deploy to staging
+                        sh '''
+                            echo "Deploying version ${APP_VERSION} to staging"
+                            # docker-compose -f docker-compose.staging.yml up -d
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Smoke Tests') {
+            when {
+                branch 'master'
+            }
+            steps {
+                echo 'Running smoke tests...'
+                sh '''
+                    # curl -f http://deployment-url/health || exit 1
+                    echo "Smoke tests passed"
+                '''
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo 'Cleaning up...'
+            
+            // Clean workspace
+            cleanWs()
+            
+            // Remove Docker images
+            sh """
+                docker rmi ${APP_NAME}:${APP_VERSION} || true
+                docker rmi ${APP_NAME}:latest || true
+            """
+        }
+        
+        success {
+            echo 'Pipeline completed successfully!'
+            
+            // Send success notification
+            emailext (
+                subject: "SUCCESS: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                body: "The pipeline ${env.JOB_NAME} #${env.BUILD_NUMBER} completed successfully.\n\nCheck: ${env.BUILD_URL}",
+                to: 'team@example.com'
+            )
+            
+            // Slack notification
+            slackSend(
+                color: 'good',
+                message: "✅ Build Successful: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+            )
+        }
+        
+        failure {
+            echo 'Pipeline failed!'
+            
+            // Send failure notification
+            emailext (
+                subject: "FAILURE: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                body: "The pipeline ${env.JOB_NAME} #${env.BUILD_NUMBER} failed.\n\nCheck: ${env.BUILD_URL}",
+                to: 'team@example.com'
+            )
+            
+            // Slack notification
+            slackSend(
+                color: 'danger',
+                message: "❌ Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}\nCheck: ${env.BUILD_URL}"
+            )
+        }
+        
+        unstable {
+            echo 'Pipeline is unstable!'
+            
+            // Send unstable notification
+            slackSend(
+                color: 'warning',
+                message: "⚠️ Build Unstable: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+            )
+        }
+    }
+}

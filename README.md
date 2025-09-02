@@ -25,6 +25,17 @@ This repository contains interactive DevOps interview scenarios designed to run 
   - Environment variables
   - Multi-container debugging
 
+### 3. Jenkins CI/CD Pipeline Troubleshooting
+- **Path**: `/jenkins-pipeline`
+- **Difficulty**: Intermediate
+- **Duration**: 35 minutes
+- **Skills Tested**:
+  - Jenkins pipeline syntax
+  - CI/CD best practices
+  - Maven build configuration
+  - Docker integration
+  - Testing and deployment stages
+
 ## How to Use These Scenarios
 
 ### For Killercoda Integration
