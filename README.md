@@ -36,6 +36,17 @@ This repository contains interactive DevOps interview scenarios designed to run 
   - Docker integration
   - Testing and deployment stages
 
+### 4. Terraform State and Configuration Troubleshooting
+- **Path**: `/terraform-state`
+- **Difficulty**: Intermediate
+- **Duration**: 30 minutes
+- **Skills Tested**:
+  - Terraform state management
+  - Configuration debugging
+  - Dependency resolution
+  - State file recovery
+  - Infrastructure as Code best practices
+
 ## How to Use These Scenarios
 
 ### For Killercoda Integration

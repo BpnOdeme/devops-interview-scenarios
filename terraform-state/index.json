@@ -1,0 +1,60 @@
+{
+  "title": "Terraform State and Configuration Troubleshooting",
+  "description": "Fix corrupted Terraform state, resolve configuration errors, and recover from state conflicts",
+  "difficulty": "intermediate",
+  "time": "30 minutes",
+  "details": {
+    "intro": {
+      "text": "intro.md",
+      "background": "setup.sh",
+      "foreground": "foreground.sh"
+    },
+    "steps": [
+      {
+        "title": "Analyze State Issues",
+        "text": "step1.md",
+        "verify": "verify-step1.sh"
+      },
+      {
+        "title": "Fix Configuration Errors",
+        "text": "step2.md",
+        "verify": "verify-step2.sh"
+      },
+      {
+        "title": "Resolve State Conflicts",
+        "text": "step3.md",
+        "verify": "verify-step3.sh"
+      },
+      {
+        "title": "Fix Dependencies",
+        "text": "step4.md",
+        "verify": "verify-step4.sh"
+      },
+      {
+        "title": "Validate Infrastructure",
+        "text": "step5.md",
+        "verify": "verify-step5.sh"
+      }
+    ],
+    "finish": {
+      "text": "finish.md"
+    },
+    "assets": {
+      "host01": [
+        {
+          "file": "terraform-reference.tf",
+          "target": "/tmp/reference/"
+        }
+      ]
+    }
+  },
+  "environment": {
+    "uilayout": "terminal",
+    "uieditorpath": "/root/infrastructure",
+    "hideintro": false,
+    "hidefinish": false
+  },
+  "backend": {
+    "imageid": "ubuntu"
+  }
+}
