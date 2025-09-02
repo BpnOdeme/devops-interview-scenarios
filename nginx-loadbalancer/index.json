@@ -1,0 +1,50 @@
+{
+  "title": "Nginx Load Balancer Troubleshooting",
+  "description": "Fix broken Nginx reverse proxy and load balancing configuration",
+  "difficulty": "intermediate",
+  "time": "25 minutes",
+  "details": {
+    "intro": {
+      "text": "intro.md",
+      "background": "setup.sh",
+      "foreground": "foreground.sh"
+    },
+    "steps": [
+      {
+        "title": "Investigate the Issue",
+        "text": "step1.md",
+        "verify": "verify-step1.sh"
+      },
+      {
+        "title": "Fix Configuration",
+        "text": "step2.md",
+        "verify": "verify-step2.sh"
+      },
+      {
+        "title": "Test Load Balancing",
+        "text": "step3.md",
+        "verify": "verify-step3.sh"
+      }
+    ],
+    "finish": {
+      "text": "finish.md"
+    },
+    "assets": {
+      "host01": [
+        {
+          "file": "nginx.conf",
+          "target": "/tmp/configs/"
+        }
+      ]
+    }
+  },
+  "environment": {
+    "uilayout": "terminal",
+    "uieditorpath": "/root",
+    "hideintro": false,
+    "hidefinish": false
+  },
+  "backend": {
+    "imageid": "ubuntu:2204"
+  }
+}
