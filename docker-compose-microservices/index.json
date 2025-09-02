@@ -1,0 +1,55 @@
+{
+  "title": "Docker Compose Microservices Troubleshooting",
+  "description": "Fix a broken Docker Compose microservices architecture with networking and configuration issues",
+  "difficulty": "intermediate",
+  "time": "30 minutes",
+  "details": {
+    "intro": {
+      "text": "intro.md",
+      "background": "setup.sh",
+      "foreground": "foreground.sh"
+    },
+    "steps": [
+      {
+        "title": "Analyze the Architecture",
+        "text": "step1.md",
+        "verify": "verify-step1.sh"
+      },
+      {
+        "title": "Fix Network Configuration",
+        "text": "step2.md",
+        "verify": "verify-step2.sh"
+      },
+      {
+        "title": "Fix Service Dependencies",
+        "text": "step3.md",
+        "verify": "verify-step3.sh"
+      },
+      {
+        "title": "Test the Stack",
+        "text": "step4.md",
+        "verify": "verify-step4.sh"
+      }
+    ],
+    "finish": {
+      "text": "finish.md"
+    },
+    "assets": {
+      "host01": [
+        {
+          "file": "docker-compose-reference.yml",
+          "target": "/tmp/reference/"
+        }
+      ]
+    }
+  },
+  "environment": {
+    "uilayout": "terminal",
+    "uieditorpath": "/root/microservices",
+    "hideintro": false,
+    "hidefinish": false
+  },
+  "backend": {
+    "imageid": "docker"
+  }
+}

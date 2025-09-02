@@ -14,6 +14,17 @@ This repository contains interactive DevOps interview scenarios designed to run 
   - Health check implementation
   - Log analysis
 
+### 2. Docker Compose Microservices Troubleshooting
+- **Path**: `/docker-compose-microservices`
+- **Difficulty**: Intermediate
+- **Duration**: 30 minutes
+- **Skills Tested**:
+  - Docker Compose configuration
+  - Container networking
+  - Service dependencies
+  - Environment variables
+  - Multi-container debugging
+
 ## How to Use These Scenarios
 
 ### For Killercoda Integration
