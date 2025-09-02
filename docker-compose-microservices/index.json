@@ -50,6 +50,6 @@
     "hidefinish": false
   },
   "backend": {
-    "imageid": "docker"
+    "imageid": "ubuntu"
   }
 }

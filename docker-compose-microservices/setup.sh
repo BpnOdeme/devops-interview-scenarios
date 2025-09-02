@@ -4,10 +4,16 @@ set -e
 
 echo "Setting up broken microservices environment..."
 
+# Install Docker if not present
+if ! command -v docker &> /dev/null; then
+    apt-get update -qq
+    apt-get install -y docker.io docker-compose > /dev/null 2>&1
+    systemctl start docker
+fi
+
 # Install Docker Compose if not present
 if ! command -v docker-compose &> /dev/null; then
-    curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
+    apt-get install -y docker-compose > /dev/null 2>&1
 fi
 
 # Create project directory
