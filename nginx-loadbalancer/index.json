@@ -45,6 +45,6 @@
     "hidefinish": false
   },
   "backend": {
-    "imageid": "ubuntu:2204"
+    "imageid": "ubuntu"
   }
 }
