@@ -1,24 +1,14 @@
 #!/bin/bash
 
-# Verify that the user has checked the configuration
-if [ -f /tmp/nginx_checked ]; then
+# Verify that the user has investigated the Nginx configuration
+# Step 1 is about understanding the issues, not fixing them
+
+# Check if nginx -t output was generated (it will fail due to errors)
+nginx -t 2>&1 | grep -q "nginx: \[" && {
     echo "done"
     exit 0
-fi
+}
 
-# Check if user ran nginx -t
-if grep -q "nginx -t" ~/.bash_history 2>/dev/null; then
-    touch /tmp/nginx_checked
-    echo "done"
-    exit 0
-fi
-
-# Check if user viewed the configuration
-if grep -q "loadbalancer" ~/.bash_history 2>/dev/null; then
-    touch /tmp/nginx_checked
-    echo "done"
-    exit 0
-fi
-
-echo "Please run 'nginx -t' to check the configuration"
+# If we reach here, nginx -t hasn't been run or has different output
+echo "Please run 'nginx -t' to check the Nginx configuration for errors"
 exit 1

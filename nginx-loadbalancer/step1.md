@@ -6,12 +6,15 @@ First, let's understand what's wrong with the Nginx load balancer configuration.
 
 ## Instructions
 
-1. Check the Nginx configuration syntax:
+Run these commands in order:
+
+1. **First, check the Nginx configuration syntax** (REQUIRED for verification):
    ```bash
    nginx -t
    ```
+   This will show you syntax errors in the configuration.
 
-2. View the current configuration:
+2. View the current configuration to identify issues:
    ```bash
    cat /etc/nginx/sites-available/loadbalancer
    ```
@@ -23,7 +26,7 @@ First, let's understand what's wrong with the Nginx load balancer configuration.
    curl http://127.0.0.1:8083/
    ```
 
-4. Review Nginx error logs:
+4. Review Nginx error logs (optional):
    ```bash
    tail -20 /var/log/nginx/error.log
    ```

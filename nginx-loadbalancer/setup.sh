@@ -50,6 +50,9 @@ for i in 1 2 3; do
     nohup python3 /var/www/backend${i}/app.py > /var/log/backend${i}.log 2>&1 &
 done
 
+# Wait for backends to start
+sleep 2
+
 # Create broken Nginx configuration (intentionally broken)
 cat > /etc/nginx/sites-available/loadbalancer << 'EOF'
 upstream backend_servers {
