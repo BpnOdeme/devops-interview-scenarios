@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  nginx-lb:
+    build: .
+    container_name: nginx-lb-scenario
+    ports:
+      - "9080:80"
+      - "9081:8081"
+      - "9082:8082"
+      - "9083:8083"
+    privileged: true
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./fixed-nginx.conf:/etc/nginx/sites-available/fixed:ro
+    networks:
+      - nginx-lb-network
+
+networks:
+  nginx-lb-network:
+    driver: bridge
