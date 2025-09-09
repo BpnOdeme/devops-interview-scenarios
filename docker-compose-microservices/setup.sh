@@ -2,7 +2,7 @@
 
 set -e
 
-echo "Setting up broken microservices environment..."
+echo "Setting up microservices environment..."
 
 # Install Docker if not present
 if ! command -v docker &> /dev/null; then
@@ -14,6 +14,12 @@ fi
 # Install Docker Compose if not present
 if ! command -v docker-compose &> /dev/null; then
     apt-get install -y docker-compose > /dev/null 2>&1
+fi
+
+# Install Node.js for local testing
+if ! command -v node &> /dev/null; then
+    curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+    apt-get install -y nodejs > /dev/null 2>&1
 fi
 
 # Create project directory
@@ -93,7 +99,7 @@ volumes:
   app-data:                    # ISSUE: Unused volume defined
 EOF
 
-# Create API directory with broken/missing files
+# Create API directory with MISSING index.js file (intentional issue)
 mkdir -p api
 cat > api/package.json <<'EOF'
 {
@@ -111,11 +117,7 @@ cat > api/package.json <<'EOF'
 }
 EOF
 
-# Create incomplete API server (missing but referenced in docker-compose)
-cat > api/index.js <<'EOF'
-// TODO: Implement API server
-// This file needs to be completed
-EOF
+# Intentionally NOT creating index.js file - this is the broken part!
 
 # Create nginx config with wrong upstream
 mkdir -p html
@@ -241,7 +243,9 @@ echo "1. Permission denied on docker-compose.yml"
 echo "2. Network configuration problems"
 echo "3. Service name mismatches"
 echo "4. Port configuration errors"
-echo "5. Missing application code"
+echo "5. Missing application code (api/index.js)"
 echo "6. Environment variable issues"
+echo "7. Database connection failures"
+echo "8. Redis authentication problems"
 echo ""
 echo "Start by fixing the file permissions!"
