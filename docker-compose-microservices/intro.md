@@ -17,7 +17,7 @@ The development team reports multiple issues:
 - Redis authentication is broken
 - Frontend cannot reach the API
 - Docker Compose file has permission issues
-- Missing application code and configurations
+- Misconfigured application settings
 
 ## Your Mission
 
@@ -25,7 +25,7 @@ The development team reports multiple issues:
 2. **Analyze the Architecture**: Understand service dependencies and network topology
 3. **Fix Network Configuration**: Ensure all services can communicate properly
 4. **Correct Service Configuration**: Fix environment variables, ports, and dependencies
-5. **Add Missing Components**: Create necessary application files
+5. **Verify Components**: Ensure all services have required configurations
 6. **Test the Stack**: Verify all services are running and connected
 
 ## Available Tools

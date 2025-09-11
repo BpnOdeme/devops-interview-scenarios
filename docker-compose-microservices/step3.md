@@ -29,11 +29,10 @@ Fix environment variables, port mappings, and service dependencies.
    - Verify if Redis authentication is configured consistently
    - Check port mappings
 
-7. Create the missing API application:
-   - Check what files exist in the `api/` directory
-   - Look at `package.json` to understand dependencies
-   - Create the missing `index.js` file with proper Express setup
-   - Ensure it uses environment variables for database and cache connections
+7. Verify application code:
+   - Check that all necessary application files exist in the `api/` directory
+   - Confirm `package.json` dependencies match what the application needs
+   - Ensure the application is configured to use environment variables
 
 8. Fix nginx configuration:
    - Check the current nginx configuration in `nginx/default.conf`
@@ -60,4 +59,4 @@ Fix environment variables, port mappings, and service dependencies.
 - [ ] Redis authentication is consistently configured
 - [ ] Application code is properly mounted
 - [ ] Nginx configuration correctly proxies to API service
-- [ ] API application file exists and is functional
+- [ ] Application code is properly configured

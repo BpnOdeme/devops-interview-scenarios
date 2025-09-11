@@ -115,7 +115,51 @@ cat > api/package.json <<'EOF'
 }
 EOF
 
-# Intentionally NOT creating index.js file - this is the broken part!
+# Create a working API application (backend team provided this)
+cat > api/index.js <<'EOF'
+const express = require('express');
+const mysql = require('mysql2');
+const redis = require('redis');
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.use(express.json());
+
+// MySQL connection
+const db = mysql.createConnection({
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME
+});
+
+// Redis connection
+const redisClient = redis.createClient({
+  host: process.env.REDIS_HOST,
+  port: process.env.REDIS_PORT,
+  password: process.env.REDIS_PASSWORD
+});
+
+redisClient.on('error', err => console.log('Redis Client Error', err));
+
+app.get('/', (req, res) => {
+  res.json({ message: 'API is running!' });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'healthy', service: 'api' });
+});
+
+app.get('/api', (req, res) => {
+  res.json({ message: 'API is working!' });
+});
+
+app.listen(port, () => {
+  console.log(`API server listening on port ${port}`);
+});
+EOF
 
 # Create nginx config with wrong upstream
 mkdir -p html
@@ -241,7 +285,7 @@ echo "1. Permission denied on docker-compose.yml"
 echo "2. Network configuration problems"
 echo "3. Service name mismatches"
 echo "4. Port configuration errors"
-echo "5. Missing application code (api/index.js)"
+echo "5. Volume mount issues"
 echo "6. Environment variable issues"
 echo "7. Database connection failures"
 echo "8. Redis authentication problems"
