@@ -41,47 +41,45 @@ services:
       - frontend-net
     volumes:
       - ./html:/usr/share/nginx/html
-    # ISSUE: Frontend not in backend network - cannot reach API
     
   api:
     image: node:14-alpine
     ports:
       - "3000:3000"
     environment:
-      - DB_HOST=database       # ISSUE: Wrong service name (should be 'db')
-      - DB_PORT=3307           # ISSUE: Wrong port (should be 3306)
-      - REDIS_HOST=redis-cache # ISSUE: Wrong service name (should be 'cache')
+      - DB_HOST=database
+      - DB_PORT=3307
+      - REDIS_HOST=redis-cache
       - REDIS_PORT=6379
     depends_on:
       - db
       - cache
     networks:
       - backend-net
-      - frontend              # ISSUE: Wrong network name (should be 'frontend-net')
+      - frontend
     command: npm start
     working_dir: /app
-    # ISSUE: No volume mount for application code
     
   db:
     image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: secret
       MYSQL_DATABASE: appdb
-      MYSQL_PASSWORD: apppass  # ISSUE: MYSQL_USER not defined
+      MYSQL_PASSWORD: apppass
     ports:
       - "3306:3306"
     networks:
-      - db-net                 # ISSUE: Not in same network as API
+      - db-net
     volumes:
       - db-data:/var/lib/mysql
       
   cache:
     image: redis:6-alpine
     ports:
-      - "6379:6380"            # ISSUE: Port mapping incorrect (host:container reversed)
+      - "6379:6380"
     networks:
-      - cache-net              # ISSUE: Not in same network as API
-    command: redis-server --requirepass secretpass  # ISSUE: Password not configured in API
+      - cache-net
+    command: redis-server --requirepass secretpass
 
 networks:
   frontend-net:
@@ -91,12 +89,12 @@ networks:
   db-net:
     driver: bridge
   cache-net:
-    driver: overlay            # ISSUE: Overlay driver requires swarm mode
+    driver: overlay
 
 volumes:
   db-data:
     driver: local
-  app-data:                    # ISSUE: Unused volume defined
+  app-data:
 EOF
 
 # Create API directory with MISSING index.js file (intentional issue)
@@ -147,7 +145,7 @@ server {
     }
 
     location /api {
-        proxy_pass http://api-server:3001;  # ISSUE: Wrong service name and port
+        proxy_pass http://api-server:3001;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }

@@ -4,6 +4,10 @@
 
 Fix the network configuration so all services can communicate properly.
 
+## Background
+
+In a microservices architecture, proper network configuration is crucial for service communication. Docker Compose provides network isolation by default, but services need to be on the same network to communicate with each other.
+
 ## Instructions
 
 1. Edit the docker-compose.yml file:
@@ -15,78 +19,38 @@ Fix the network configuration so all services can communicate properly.
    vim /root/microservices/docker-compose.yml
    ```
 
-2. Fix the network issues:
+2. Analyze the current network configuration:
+   - Check which networks each service is connected to
+   - Identify services that need to communicate with each other
+   - Look for network driver compatibility issues
 
-### Network Consolidation Strategy
-
-Instead of having separate networks for each service, use a unified network architecture:
-
-```yaml
-networks:
-  app-network:
-    driver: bridge
-```
-
-### Service Network Assignments
-
-Update each service to use the correct network:
-
-- **Frontend**: Should be on the same network as API
-- **API**: Should be on the same network as DB and Cache
-- **DB**: Should be on the same network as API
-- **Cache**: Should be on the same network as API
-
-### Fix These Specific Issues:
-
-1. **Frontend service**:
-   - Add `app-network` to networks section
-   - Remove `frontend-net`
-
-2. **API service**:
-   - Change `frontend` to `frontend-net` or better yet, use single `app-network`
-   - Ensure it's on same network as DB and Cache
-
-3. **DB service**:
-   - Change `db-net` to `app-network`
-
-4. **Cache service**:
-   - Change `cache-net` to `app-network`
-
-5. **Networks section**:
-   - Change overlay driver to bridge for cache-net
-   - Or simplify to single `app-network`
-
-3. Remove conflicting Docker network if it exists:
+3. Remove any conflicting Docker networks:
    ```bash
-   docker network rm backend-net 2>/dev/null || true
+   docker network ls
+   docker network rm <network-name> 2>/dev/null || true
    ```
 
-4. Validate the configuration:
+4. Validate your configuration:
    ```bash
    docker-compose config
    ```
 
-## Best Practice
+## Hints
 
-Use a single network for all services in a small microservices stack:
-```yaml
-services:
-  frontend:
-    networks:
-      - app-network
-  api:
-    networks:
-      - app-network
-  db:
-    networks:
-      - app-network
-  cache:
-    networks:
-      - app-network
+- Services can only communicate if they're on the same network
+- The `overlay` driver requires Docker Swarm mode - use `bridge` for single-host deployments
+- Consider whether you need multiple networks or if a single network would suffice
+- Check the reference configuration in `/tmp/reference/` for guidance
 
-networks:
-  app-network:
-    driver: bridge
-```
+## Common Network Issues
 
-This ensures all services can communicate while maintaining isolation from other Docker stacks.
+- Services on different networks cannot resolve each other's hostnames
+- Network driver incompatibility can prevent network creation
+- Pre-existing networks with the same name can cause conflicts
+
+## What to Check
+
+- [ ] All services that need to communicate are on the same network
+- [ ] Network drivers are appropriate for your deployment
+- [ ] No conflicting network names exist
+- [ ] Services can resolve each other by name
