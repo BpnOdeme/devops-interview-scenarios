@@ -39,14 +39,14 @@ if ! echo "$CONFIG" | grep -q "MYSQL_USER:"; then
     exit 1
 fi
 
-# Check Redis port mapping
-if ! echo "$CONFIG" | grep -A 5 "cache:" | grep -q "6379:6379"; then
+# Check Redis port mapping (check for correct format)
+if ! echo "$CONFIG" | grep -A 10 "cache:" | grep -E "published: 6379|6379->6379" > /dev/null; then
     echo "Redis port mapping should be 6379:6379"
     exit 1
 fi
 
-# Check if API has volume mount
-if ! echo "$CONFIG" | grep -A 10 "api:" | grep -q "./api:/app"; then
+# Check if API has volume mount (accept both relative and absolute paths)
+if ! echo "$CONFIG" | grep -A 10 "api:" | grep -E "api:/app|/root/microservices/api:/app" > /dev/null; then
     echo "API service is missing volume mount for application code"
     exit 1
 fi
