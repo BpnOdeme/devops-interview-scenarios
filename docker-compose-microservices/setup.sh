@@ -115,7 +115,7 @@ cat > api/package.json <<'EOF'
 }
 EOF
 
-# Create a working API application (backend team provided this)
+# Create a working API application (fixed for proper operation)
 cat > api/index.js <<'EOF'
 const express = require('express');
 const mysql = require('mysql2');
@@ -126,23 +126,46 @@ const port = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// MySQL connection
-const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME
-});
+// MySQL connection with proper defaults and error handling
+const dbConfig = {
+  host: process.env.DB_HOST || 'db',
+  port: parseInt(process.env.DB_PORT || '3306'),
+  user: process.env.DB_USER || 'appuser',
+  password: process.env.DB_PASSWORD || 'apppass',
+  database: process.env.DB_NAME || 'appdb'
+};
 
-// Redis connection
+const db = mysql.createConnection(dbConfig);
+
+// Connect to MySQL with retry logic
+function connectToDatabase() {
+  db.connect((err) => {
+    if (err) {
+      console.error('MySQL connection error:', err.message);
+      console.log('Retrying MySQL connection in 5 seconds...');
+      setTimeout(connectToDatabase, 5000);
+    } else {
+      console.log('Connected to MySQL database');
+    }
+  });
+}
+
+// Redis connection with proper defaults
 const redisClient = redis.createClient({
-  host: process.env.REDIS_HOST,
-  port: process.env.REDIS_PORT,
-  password: process.env.REDIS_PASSWORD
+  host: process.env.REDIS_HOST || 'cache',
+  port: parseInt(process.env.REDIS_PORT || '6379'),
+  password: process.env.REDIS_PASSWORD || 'secretpass',
+  retry_strategy: (options) => {
+    if (options.error && options.error.code === 'ECONNREFUSED') {
+      console.log('Redis connection refused, retrying...');
+      return 5000;
+    }
+    return Math.min(options.attempt * 100, 3000);
+  }
 });
 
-redisClient.on('error', err => console.log('Redis Client Error', err));
+redisClient.on('error', err => console.log('Redis Client Error:', err.message));
+redisClient.on('connect', () => console.log('Connected to Redis'));
 
 app.get('/', (req, res) => {
   res.json({ message: 'API is running!' });
@@ -158,6 +181,16 @@ app.get('/api', (req, res) => {
 
 app.listen(port, () => {
   console.log(`API server listening on port ${port}`);
+  // Start database connections after server starts
+  connectToDatabase();
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, closing connections...');
+  db.end();
+  redisClient.quit();
+  process.exit(0);
 });
 EOF
 
@@ -278,16 +311,18 @@ volumes:
 EOF
 
 echo ""
-echo "Broken microservices environment created!"
+echo "Microservices troubleshooting environment created!"
 echo ""
-echo "Issues to fix:"
-echo "1. Permission denied on docker-compose.yml"
-echo "2. Network configuration problems"
-echo "3. Service name mismatches"
-echo "4. Port configuration errors"
-echo "5. Volume mount issues"
-echo "6. Environment variable issues"
-echo "7. Database connection failures"
-echo "8. Redis authentication problems"
+echo "DevOps issues to fix (infrastructure/configuration):"
+echo "1. Permission denied on docker-compose.yml (chmod 000)"
+echo "2. Network configuration problems (services on different networks)"
+echo "3. Service name mismatches (DB_HOST=database but service name is db)"
+echo "4. Port configuration errors (Redis 6379:6380 should be 6379:6379)"
+echo "5. Volume mount issues (API code not mounted)"
+echo "6. Network driver issues (overlay without Swarm)"
+echo "7. Nginx proxy misconfiguration (wrong service name and port)"
 echo ""
-echo "Start by fixing the file permissions!"
+echo "Note: Application code is properly written with fallback values."
+echo "DevOps engineer should focus on infrastructure fixes only."
+echo ""
+echo "Start by fixing the file permissions: chmod 644 docker-compose.yml"
