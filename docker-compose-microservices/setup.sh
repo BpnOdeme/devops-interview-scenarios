@@ -3,24 +3,30 @@
 set -e
 
 echo "Starting setup of microservices environment..."
-echo "This may take a few moments..."
 
-# Install Docker if not present
-if ! command -v docker &> /dev/null; then
-    apt-get update -qq
-    apt-get install -y docker.io docker-compose > /dev/null 2>&1
-    systemctl start docker
-fi
+# Skip dependency installation in Killercode (they're pre-installed)
+# These are only needed for local testing
+if [ "$KILLERCODE_ENVIRONMENT" != "true" ]; then
+    # Install Docker if not present
+    if ! command -v docker &> /dev/null; then
+        echo "Installing Docker..."
+        apt-get update -qq
+        apt-get install -y docker.io docker-compose > /dev/null 2>&1
+        systemctl start docker
+    fi
 
-# Install Docker Compose if not present
-if ! command -v docker-compose &> /dev/null; then
-    apt-get install -y docker-compose > /dev/null 2>&1
-fi
+    # Install Docker Compose if not present
+    if ! command -v docker-compose &> /dev/null; then
+        echo "Installing Docker Compose..."
+        apt-get install -y docker-compose > /dev/null 2>&1
+    fi
 
-# Install Node.js for local testing
-if ! command -v node &> /dev/null; then
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-    apt-get install -y nodejs > /dev/null 2>&1
+    # Install Node.js for local testing
+    if ! command -v node &> /dev/null; then
+        echo "Installing Node.js..."
+        curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+        apt-get install -y nodejs > /dev/null 2>&1
+    fi
 fi
 
 # Create project directory
