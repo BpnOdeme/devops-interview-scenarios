@@ -20,8 +20,23 @@ else
 fi
 
 echo ""
+echo "Waiting for setup to complete..."
+# Wait for setup.sh to complete (max 30 seconds)
+for i in {1..30}; do
+    if [ -d /root/microservices ]; then
+        break
+    fi
+    sleep 1
+done
+
 echo "Checking project structure..."
-cd /root/microservices 2>/dev/null || echo "[!] Project directory not found"
+if [ -d /root/microservices ]; then
+    cd /root/microservices
+    echo "[✓] Project directory found"
+else
+    echo "[✗] Project directory not found - Setup may have failed"
+    echo "Please wait a moment for setup to complete or run: ./setup.sh"
+fi
 
 # Try to read docker-compose.yml
 if [ -r docker-compose.yml ]; then

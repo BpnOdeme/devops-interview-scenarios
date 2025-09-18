@@ -2,7 +2,8 @@
 
 set -e
 
-echo "Setting up microservices environment..."
+echo "Starting setup of microservices environment..."
+echo "This may take a few moments..."
 
 # Install Docker if not present
 if ! command -v docker &> /dev/null; then
@@ -311,7 +312,11 @@ volumes:
 EOF
 
 echo ""
-echo "Microservices troubleshooting environment created!"
+echo "=========================================="
+echo "✅ Setup completed successfully!"
+echo "=========================================="
+echo ""
+echo "Microservices troubleshooting environment is ready at: /root/microservices"
 echo ""
 echo "DevOps issues to fix (infrastructure/configuration):"
 echo "1. Permission denied on docker-compose.yml (chmod 000)"
@@ -325,4 +330,5 @@ echo ""
 echo "Note: Application code is properly written with fallback values."
 echo "DevOps engineer should focus on infrastructure fixes only."
 echo ""
-echo "Start by fixing the file permissions: chmod 644 docker-compose.yml"
+echo "Start by navigating to: cd /root/microservices"
+echo "Then fix permissions: chmod 644 docker-compose.yml"
