@@ -2,6 +2,30 @@
 
 echo "Welcome to Docker Compose Microservices Troubleshooting!"
 echo ""
+
+# Run setup if directory doesn't exist
+if [ ! -d /root/microservices ]; then
+    echo "Setting up the environment..."
+    # Find and run setup.sh
+    if [ -f ./setup.sh ]; then
+        bash ./setup.sh
+    elif [ -f /tmp/setup.sh ]; then
+        bash /tmp/setup.sh
+    elif [ -f ~/setup.sh ]; then
+        bash ~/setup.sh
+    else
+        echo "[!] Setup script not found, creating environment manually..."
+        # Create the environment inline if setup.sh is not found
+        bash -c "$(curl -fsSL https://raw.githubusercontent.com/BpnOdeme/devops-interview-scenarios/main/docker-compose-microservices/setup.sh)" 2>/dev/null || \
+        # If curl fails, create minimal environment
+        (
+            mkdir -p /root/microservices
+            cd /root/microservices
+            echo "Minimal environment created"
+        )
+    fi
+fi
+
 echo "Checking Docker environment..."
 echo ""
 
@@ -22,18 +46,15 @@ fi
 echo ""
 echo "Checking project structure..."
 
-# Quick check for project directory (non-blocking)
+# Now check for project directory
 if [ -d /root/microservices ]; then
     cd /root/microservices
     echo "[✓] Project directory found at /root/microservices"
 else
-    echo "[!] Project directory not ready yet"
-    echo "[!] Setup is running in the background..."
-    echo ""
-    echo "Please wait a few seconds and then run:"
-    echo "  cd /root/microservices"
-    echo ""
-    # Don't change directory if it doesn't exist
+    echo "[✗] Failed to create project directory"
+    echo "Creating it now..."
+    mkdir -p /root/microservices
+    cd /root/microservices
 fi
 
 # Try to read docker-compose.yml
