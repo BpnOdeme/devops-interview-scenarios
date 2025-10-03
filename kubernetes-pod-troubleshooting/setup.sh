@@ -1,74 +1,32 @@
 #!/bin/bash
 
-# Emergency setup for immediate testing
-# This script uses the simplest possible approach
+# Killercoda Kubernetes Pod Troubleshooting Setup
+# This script runs on kubernetes-kubeadm-1node image which has kubectl and cluster ready
 
-echo "🚨 Emergency Kubernetes Setup - Simple and Fast"
+echo "🚀 Setting up Kubernetes Pod Troubleshooting Scenario..."
 
-# Method 1: Direct binary download (most compatible)
-echo "📦 Installing kubectl via direct download..."
-curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
-chmod +x kubectl
-sudo mv kubectl /usr/local/bin/ 2>/dev/null || mv kubectl /usr/bin/
+# Wait for Kubernetes cluster to be fully ready
+echo "⏳ Waiting for Kubernetes cluster to be ready..."
+until kubectl get nodes | grep -w Ready; do
+  echo "Waiting for node to be ready..."
+  sleep 5
+done
 
-# Add to PATH
-export PATH="/usr/local/bin:/usr/bin:$PATH"
-echo 'export PATH="/usr/local/bin:/usr/bin:$PATH"' >> ~/.bashrc
-
-# Verify
-if command -v kubectl >/dev/null 2>&1; then
-    echo "✅ kubectl installed successfully at: $(which kubectl)"
-    kubectl version --client
-else
-    echo "❌ kubectl installation failed - trying alternative..."
-
-    # Alternative: Try with wget
-    wget -O kubectl "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
-    chmod +x kubectl
-    mv kubectl $HOME/bin/ 2>/dev/null || mkdir -p $HOME/bin && mv kubectl $HOME/bin/
-    export PATH="$HOME/bin:$PATH"
-    echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
-fi
-
-# Try to use existing cluster first
-echo "🔍 Checking for existing cluster..."
-if kubectl cluster-info 2>/dev/null | grep -q "running"; then
-    echo "✅ Found working Kubernetes cluster!"
-    kubectl get nodes
-else
-    echo "🚀 No cluster found, installing Docker and minikube..."
-
-    # Install Docker
-    apt-get update && apt-get install -y docker.io
-    systemctl start docker
-
-    # Install minikube
-    curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-    chmod +x minikube
-    mv minikube /usr/local/bin/
-
-    # Start minikube with simplest config
-    echo "Starting minikube..."
-    minikube start --driver=none --force
-
-    # Wait a bit
-    sleep 30
-    kubectl wait --for=condition=Ready nodes --all --timeout=180s || echo "Cluster may need more time..."
-fi
+echo "✅ Kubernetes cluster is ready!"
+kubectl get nodes
 
 # Create webapp namespace
 echo "📁 Creating webapp namespace..."
-kubectl create namespace webapp 2>/dev/null || echo "Namespace might already exist"
+kubectl create namespace webapp
 
-# Create broken deployments
-echo "💣 Creating broken deployments..."
-
-# Broken postgres
-kubectl apply -n webapp -f - << 'EOF'
+# Deploy broken PostgreSQL (wrong image tag)
+echo "💣 Deploying broken PostgreSQL..."
+cat << 'EOF' | kubectl apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres
+  namespace: webapp
 spec:
   replicas: 1
   selector:
@@ -81,20 +39,39 @@ spec:
     spec:
       containers:
       - name: postgres
-        image: postgres:13-wrong
+        image: postgres:13-wrong  # Intentionally wrong image
+        ports:
+        - containerPort: 5432
         env:
         - name: POSTGRES_DB
           value: webapp
+        # Missing POSTGRES_USER and POSTGRES_PASSWORD
+        resources:
+          requests:
+            memory: "64Mi"  # Too low memory
+            cpu: "250m"
+          limits:
+            memory: "64Mi"  # Too low memory
+            cpu: "500m"
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-pvc-wrong  # Wrong PVC name
 EOF
 
-# Broken API
-kubectl apply -n webapp -f - << 'EOF'
+# Deploy broken API service (wrong selector)
+echo "💣 Deploying broken API service..."
+cat << 'EOF' | kubectl apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api
+  namespace: webapp
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: api
@@ -106,18 +83,129 @@ spec:
       containers:
       - name: api
         image: node:16-alpine
-        command: ["/bin/sh", "-c", "npm start"]
+        command: ["/bin/sh"]
+        args: ["-c", "npm start"]  # Will fail - no package.json
+        ports:
+        - containerPort: 3000
         env:
         - name: DATABASE_URL
-          value: "postgresql://user:pass@postgres-wrong:5432/webapp"
+          value: "postgresql://user:pass@postgres-wrong:5432/webapp"  # Wrong service name
+        - name: REDIS_URL
+          value: "redis://redis-cache:6379"
+        resources:
+          requests:
+            memory: "32Mi"   # Too low for Node.js
+            cpu: "100m"
+          limits:
+            memory: "64Mi"   # Too low for Node.js
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+  namespace: webapp
+spec:
+  selector:
+    app: backend  # Wrong selector - should be 'api'
+  ports:
+  - port: 3000
+    targetPort: 3000
+  type: ClusterIP
 EOF
 
-# Working Redis for comparison
-kubectl apply -n webapp -f - << 'EOF'
+# Deploy broken frontend (missing ConfigMap)
+echo "💣 Deploying broken frontend..."
+cat << 'EOF' | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d
+        - name: static-content
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-config-missing  # ConfigMap doesn't exist
+      - name: static-content
+        emptyDir: {}
+EOF
+
+# Deploy broken PVC (wrong storage class)
+echo "💣 Deploying broken PVC..."
+cat << 'EOF' | kubectl apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: webapp
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: fast-ssd-missing  # Non-existent storage class
+  resources:
+    requests:
+      storage: 1Gi
+EOF
+
+# Deploy broken ingress (wrong service names)
+echo "💣 Deploying broken ingress..."
+cat << 'EOF' | kubectl apply -f -
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: webapp-ingress
+  namespace: webapp
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: webapp.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-service-wrong  # Wrong service name
+            port:
+              number: 80
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: api-service
+            port:
+              number: 3000
+EOF
+
+# Deploy working Redis (for comparison)
+echo "✅ Deploying working Redis for comparison..."
+cat << 'EOF' | kubectl apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis
+  namespace: webapp
 spec:
   replicas: 1
   selector:
@@ -131,26 +219,46 @@ spec:
       containers:
       - name: redis
         image: redis:6-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: redis-cache
+  namespace: webapp
 spec:
   selector:
     app: redis
   ports:
   - port: 6379
+    targetPort: 6379
+  type: ClusterIP
 EOF
 
+# Wait for pods to start failing
+echo "⏳ Waiting for pods to start..."
+sleep 15
+
 echo ""
-echo "✅ Emergency setup complete!"
+echo "✅ Setup complete! Broken application deployed."
 echo ""
-echo "🔍 Current status:"
-kubectl get nodes 2>/dev/null || echo "Cluster info not available"
+echo "🔍 Current cluster status:"
+kubectl get nodes
 echo ""
-echo "📦 Broken pods (should show ImagePullBackOff and CrashLoopBackOff):"
-kubectl get pods -n webapp 2>/dev/null || echo "Pods not ready yet"
+echo "📦 Pods in webapp namespace (should show various failures):"
+kubectl get pods -n webapp
 echo ""
-echo "💡 Try: kubectl get pods -n webapp"
-echo "💡 Debug with: kubectl describe pod <pod-name> -n webapp"
+echo "🎯 Your mission: Fix all the failing pods and get the application running!"
+echo ""
+echo "💡 Start investigating with:"
+echo "   kubectl get pods -n webapp"
+echo "   kubectl describe pod <pod-name> -n webapp"
+echo "   kubectl get events -n webapp --sort-by=.lastTimestamp"

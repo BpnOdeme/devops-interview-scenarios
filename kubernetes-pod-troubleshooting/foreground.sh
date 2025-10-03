@@ -4,9 +4,9 @@
 
 echo "🚀 Welcome to Kubernetes Pod Troubleshooting!"
 echo ""
-echo "The cluster is starting up... This may take a few minutes."
+echo "You are in a Kubernetes cluster with broken applications that need fixing."
 echo ""
-echo "While you wait, here are some useful commands you'll need:"
+echo "Here are the essential commands you'll need:"
 echo ""
 echo "Basic Kubernetes Commands:"
 echo "  kubectl get pods -n webapp           # List pods in webapp namespace"
@@ -17,37 +17,22 @@ echo "  kubectl get pvc -n webapp            # List persistent volume claims"
 echo ""
 echo "Troubleshooting Commands:"
 echo "  kubectl get events -n webapp --sort-by='.lastTimestamp'"
-echo "  kubectl top pods -n webapp           # Resource usage"
 echo "  kubectl get ingress -n webapp        # Ingress status"
 echo ""
+echo "📦 Deploying broken application components..."
+echo "This will take about 30 seconds..."
+echo ""
 
-# Wait for setup to complete with better progress indication
-COUNTER=0
-while [ ! -f /tmp/setup-complete ]; do
-    COUNTER=$((COUNTER + 1))
-    case $((COUNTER % 4)) in
-        0) echo "⏳ Setting up cluster and deploying broken application..." ;;
-        1) echo "🔧 Installing Kubernetes components..." ;;
-        2) echo "🚀 Starting minikube cluster..." ;;
-        3) echo "📦 Deploying broken application components..." ;;
-    esac
-
-    # Give more detailed progress after some time
-    if [ $COUNTER -gt 12 ]; then
-        echo "📝 Note: Kubernetes cluster startup can take 2-3 minutes on first run"
-        echo "🔍 You can check setup progress in another terminal with: docker ps"
-    fi
-
-    sleep 5
-done
+# Simple wait for setup
+sleep 30
 
 echo "✅ Setup complete!"
 echo ""
 echo "🔍 Quick cluster status:"
-kubectl get nodes
+kubectl get nodes 2>/dev/null || echo "Cluster starting..."
 echo ""
 echo "📦 Pods in webapp namespace:"
-kubectl get pods -n webapp
+kubectl get pods -n webapp 2>/dev/null || echo "Pods deploying..."
 echo ""
 echo "❌ As you can see, several pods are failing!"
 echo "Your mission: Fix all the issues and get the application running."
