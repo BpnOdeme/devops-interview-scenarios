@@ -19,25 +19,33 @@ curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/miniku
 chmod +x minikube
 mv minikube /usr/local/bin/
 
-# Install docker
-curl -fsSL https://get.docker.com -o get-docker.sh > /dev/null 2>&1
-sh get-docker.sh > /dev/null 2>&1
+# Install docker (faster for Killercoda)
+apt-get install -y docker.io > /dev/null 2>&1
 systemctl start docker > /dev/null 2>&1
 systemctl enable docker > /dev/null 2>&1
 
-# Start minikube with Docker driver
-minikube start --driver=docker --kubernetes-version=v1.28.0 > /dev/null 2>&1
+# Add user to docker group
+usermod -aG docker $USER > /dev/null 2>&1
 
-# Wait for cluster to be ready
+echo "Starting Kubernetes cluster..."
+# Start minikube with lighter configuration for faster startup
+minikube start --driver=docker --memory=2048mb --cpus=2 --kubernetes-version=v1.28.0 --wait=false &
+
+# Give minikube time to start
+sleep 30
+
 echo "Waiting for Kubernetes cluster to be ready..."
-kubectl wait --for=condition=Ready nodes --all --timeout=300s > /dev/null 2>&1
+# Shorter timeout and better feedback
+timeout 180 kubectl wait --for=condition=Ready nodes --all --timeout=180s || {
+    echo "Cluster startup taking longer than expected, continuing with setup..."
+}
 
 # Enable ingress addon
 minikube addons enable ingress > /dev/null 2>&1
 
-# Extract and set up broken manifests
+# Create directories for manifests
 cd /root
-tar -xzf k8s-manifests.tar.gz > /dev/null 2>&1
+mkdir -p k8s-app/{database,backend,frontend,redis,ingress,configmaps}
 
 # Create namespace
 kubectl create namespace webapp > /dev/null 2>&1
@@ -279,3 +287,8 @@ kubectl apply -f /root/k8s-app/redis/ > /dev/null 2>&1
 
 echo "Kubernetes cluster setup complete with intentional issues!"
 echo "Use 'kubectl get pods -n webapp' to see the problematic pods."
+
+# Create setup completion marker
+touch /tmp/setup-complete
+
+echo "✅ Setup process finished!"

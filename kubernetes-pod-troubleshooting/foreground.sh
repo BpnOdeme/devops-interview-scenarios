@@ -21,9 +21,23 @@ echo "  kubectl top pods -n webapp           # Resource usage"
 echo "  kubectl get ingress -n webapp        # Ingress status"
 echo ""
 
-# Wait for setup to complete
+# Wait for setup to complete with better progress indication
+COUNTER=0
 while [ ! -f /tmp/setup-complete ]; do
-    echo "⏳ Setting up cluster and deploying broken application..."
+    COUNTER=$((COUNTER + 1))
+    case $((COUNTER % 4)) in
+        0) echo "⏳ Setting up cluster and deploying broken application..." ;;
+        1) echo "🔧 Installing Kubernetes components..." ;;
+        2) echo "🚀 Starting minikube cluster..." ;;
+        3) echo "📦 Deploying broken application components..." ;;
+    esac
+
+    # Give more detailed progress after some time
+    if [ $COUNTER -gt 12 ]; then
+        echo "📝 Note: Kubernetes cluster startup can take 2-3 minutes on first run"
+        echo "🔍 You can check setup progress in another terminal with: docker ps"
+    fi
+
     sleep 5
 done
 
