@@ -9,15 +9,45 @@ echo "Setting up Kubernetes cluster with intentional issues..."
 apt-get update > /dev/null 2>&1
 apt-get install -y curl wget jq > /dev/null 2>&1
 
-# Install kubectl
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" > /dev/null 2>&1
-chmod +x kubectl
-mv kubectl /usr/local/bin/
+# Install kubectl - try multiple methods for reliability
+echo "Installing kubectl..."
+
+# Method 1: Try snap (often available in Killercoda)
+if command -v snap > /dev/null 2>&1; then
+    snap install kubectl --classic > /dev/null 2>&1
+fi
+
+# Method 2: Try apt repository if snap failed
+if ! command -v kubectl > /dev/null 2>&1; then
+    mkdir -p /etc/apt/keyrings
+    curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg 2>/dev/null || true
+    echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /' | tee /etc/apt/sources.list.d/kubernetes.list > /dev/null 2>&1
+    apt-get update > /dev/null 2>&1
+    apt-get install -y kubectl > /dev/null 2>&1
+fi
+
+# Method 3: Direct download as fallback
+if ! command -v kubectl > /dev/null 2>&1; then
+    curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl" > /dev/null 2>&1
+    chmod +x kubectl
+    mv kubectl /usr/local/bin/ > /dev/null 2>&1 || mv kubectl /usr/bin/ > /dev/null 2>&1
+fi
+
+# Update PATH to include common binary locations
+export PATH="/usr/local/bin:/usr/bin:/snap/bin:$PATH"
+
+# Verify kubectl installation
+echo "Verifying kubectl installation..."
+which kubectl > /dev/null 2>&1 && kubectl version --client > /dev/null 2>&1 || echo "Warning: kubectl installation may have issues"
 
 # Install minikube
+echo "Installing minikube..."
 curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 > /dev/null 2>&1
 chmod +x minikube
-mv minikube /usr/local/bin/
+mv minikube /usr/local/bin/ > /dev/null 2>&1 || mv minikube /usr/bin/ > /dev/null 2>&1
+
+# Verify minikube installation
+minikube version > /dev/null 2>&1 || echo "Warning: minikube installation may have issues"
 
 # Install docker (faster for Killercoda)
 apt-get install -y docker.io > /dev/null 2>&1
