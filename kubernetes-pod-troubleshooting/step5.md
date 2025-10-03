@@ -13,56 +13,34 @@ In this final step, you'll optimize resource allocations, fix any remaining issu
 
 ## Tasks
 
-### 1. Fix Backend API Application
+### 1. Fix Backend API Configuration
 
-The backend API pod is likely still failing because it's missing the actual application code. Let's create a simple Node.js API:
+The backend API pod needs proper port configuration and resource allocation:
+
+Fix the API deployment configuration:
 
 ```bash
-# Create a simple API application
-cat << 'EOF' | kubectl create configmap api-code --from-literal=app.js='
-const express = require("express");
-const app = express();
-const port = 3000;
+# Edit the API deployment
+kubectl edit deployment api -n webapp
 
-app.use(express.json());
-
-// Health check endpoint
-app.get("/health", (req, res) => {
-  res.json({ status: "healthy", timestamp: new Date().toISOString() });
-});
-
-// Simple API endpoints
-app.get("/", (req, res) => {
-  res.json({ message: "API is working!" });
-});
-
-app.get("/users", (req, res) => {
-  res.json({ users: ["user1", "user2", "user3"] });
-});
-
-app.listen(port, "0.0.0.0", () => {
-  console.log(`API server running on port ${port}`);
-});
-' --from-literal=package.json='{
-  "name": "webapp-api",
-  "version": "1.0.0",
-  "main": "app.js",
-  "scripts": {
-    "start": "node app.js"
-  },
-  "dependencies": {
-    "express": "^4.18.0"
-  }
-}' -n webapp
-EOF
+# Fix these issues:
+# 1. Change containerPort from 80 to 3000
+# 2. Increase memory limits (128Mi minimum)
+# 3. Fix service references in environment variables
 ```
 
-### 2. Update Backend Deployment
+### 2. Alternative: Use File-Based Editing
 
-Update the API deployment to include the application code and proper startup:
+Edit the deployment file directly:
 
 ```bash
-cat << 'EOF' | kubectl apply -f -
+# Navigate to deployments directory
+cd /root/k8s-app/deployments
+
+# Edit API deployment file
+vim api-deployment.yaml
+
+# Update the following:
 apiVersion: apps/v1
 kind: Deployment
 metadata:

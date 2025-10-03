@@ -83,11 +83,9 @@ spec:
     spec:
       containers:
       - name: api
-        image: node:16-alpine
-        command: ["/bin/sh"]
-        args: ["-c", "npm start"]  # BROKEN: Will fail - no package.json
+        image: nginx:1.21
         ports:
-        - containerPort: 3000
+        - containerPort: 80  # BROKEN: Wrong port (should be 3000 for API)
         env:
         - name: DATABASE_URL
           value: "postgresql://user:pass@postgres-wrong:5432/webapp"  # BROKEN: Wrong service name
@@ -95,10 +93,10 @@ spec:
           value: "redis://redis-cache:6379"
         resources:
           requests:
-            memory: "32Mi"   # BROKEN: Too low for Node.js
+            memory: "32Mi"   # BROKEN: Too low
             cpu: "100m"
           limits:
-            memory: "64Mi"   # BROKEN: Too low for Node.js
+            memory: "64Mi"   # BROKEN: Too low
             cpu: "200m"
 EOF
 
@@ -278,7 +276,7 @@ k8s-app/
 
 ## Known Issues to Fix
 1. **PostgreSQL**: Wrong image tag, missing env vars, low resources
-2. **API**: Missing application code, wrong service references
+2. **API**: Wrong container port, low resource limits, wrong service references
 3. **Frontend**: Missing ConfigMap references
 4. **Services**: Wrong selectors
 5. **Storage**: Non-existent storage classes
