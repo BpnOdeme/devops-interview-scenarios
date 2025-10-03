@@ -25,7 +25,19 @@ This repository contains interactive DevOps interview scenarios designed to run 
   - Environment variables
   - Multi-container debugging
 
-### 3. Jenkins CI/CD Pipeline Troubleshooting
+### 3. Kubernetes Pod Troubleshooting
+- **Path**: `/kubernetes-pod-troubleshooting`
+- **Difficulty**: Intermediate
+- **Duration**: 35 minutes
+- **Skills Tested**:
+  - Pod diagnosis and debugging
+  - Service networking and DNS
+  - Persistent storage configuration
+  - Ingress and external access
+  - Resource optimization
+  - Multi-component application troubleshooting
+
+### 4. Jenkins CI/CD Pipeline Troubleshooting
 - **Path**: `/jenkins-pipeline`
 - **Difficulty**: Intermediate
 - **Duration**: 35 minutes
@@ -36,7 +48,7 @@ This repository contains interactive DevOps interview scenarios designed to run 
   - Docker integration
   - Testing and deployment stages
 
-### 4. Terraform State and Configuration Troubleshooting
+### 5. Terraform State and Configuration Troubleshooting
 - **Path**: `/terraform-state`
 - **Difficulty**: Intermediate
 - **Duration**: 30 minutes
@@ -47,7 +59,7 @@ This repository contains interactive DevOps interview scenarios designed to run 
   - State file recovery
   - Infrastructure as Code best practices
 
-### 5. Consul Service Discovery Troubleshooting
+### 6. Consul Service Discovery Troubleshooting
 - **Path**: `/consul-service-discovery`
 - **Difficulty**: Intermediate
 - **Duration**: 30 minutes

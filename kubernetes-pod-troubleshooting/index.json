@@ -1,0 +1,59 @@
+{
+  "title": "Kubernetes Pod Troubleshooting",
+  "description": "Fix a broken Kubernetes cluster with failing pods, networking issues, and resource constraints",
+  "difficulty": "intermediate",
+  "time": "35 minutes",
+  "details": {
+    "intro": {
+      "text": "intro.md",
+      "foreground": "foreground.sh"
+    },
+    "steps": [
+      {
+        "title": "Diagnose Pod Failures",
+        "text": "step1.md",
+        "verify": "verify-step1.sh"
+      },
+      {
+        "title": "Fix Service Communication",
+        "text": "step2.md",
+        "verify": "verify-step2.sh"
+      },
+      {
+        "title": "Resolve Storage and Database Issues",
+        "text": "step3.md",
+        "verify": "verify-step3.sh"
+      },
+      {
+        "title": "Configure Ingress and External Access",
+        "text": "step4.md",
+        "verify": "verify-step4.sh"
+      },
+      {
+        "title": "Optimize Resources and Verify Stack",
+        "text": "step5.md",
+        "verify": "verify-step5.sh"
+      }
+    ],
+    "finish": {
+      "text": "finish.md"
+    },
+    "assets": {
+      "host01": [
+        {
+          "file": "k8s-manifests.tar.gz",
+          "target": "/root/"
+        }
+      ]
+    }
+  },
+  "environment": {
+    "uilayout": "terminal",
+    "uieditorpath": "/root/k8s-app",
+    "hideintro": false,
+    "hidefinish": false
+  },
+  "backend": {
+    "imageid": "ubuntu"
+  }
+}

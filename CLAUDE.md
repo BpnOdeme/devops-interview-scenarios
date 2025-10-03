@@ -14,7 +14,49 @@
 - Her git commit atmadan önce mutlaka rootdaki CLAUDE.md file güncelle
 - Her commit atıldığında root dizindeki CLAUDE.md file güncelle, md fileları güncelle
 
-## Recent Work - Docker Compose Microservices Scenario (2025-09-09)
+## Recent Work - Kubernetes Pod Troubleshooting Scenario (2025-10-03)
+
+### Added New Kubernetes Troubleshooting Case
+
+#### Created comprehensive Kubernetes troubleshooting scenario:
+
+1. **Complete Kubernetes Environment**:
+   - Minikube cluster with intentional issues
+   - Multi-component application (Frontend, API, Database, Cache)
+   - Broken deployments, services, ingress, and storage
+   - Real-world troubleshooting scenarios
+
+2. **5-Step Progressive Troubleshooting**:
+   - Step 1: Pod failure diagnosis (CrashLoopBackOff, ImagePullBackOff)
+   - Step 2: Service communication and networking fixes
+   - Step 3: Storage and database connectivity resolution
+   - Step 4: Ingress configuration and external access
+   - Step 5: Resource optimization and end-to-end verification
+
+3. **Comprehensive Learning Experience**:
+   - kubectl debugging commands
+   - Service selectors and endpoints
+   - PersistentVolume and storage classes
+   - ConfigMaps and Secrets management
+   - Resource limits and health checks
+   - Ingress controller configuration
+
+4. **Production-Ready Skills**:
+   - Systematic debugging approach
+   - Real-world problem scenarios
+   - Best practices implementation
+   - Complete application stack troubleshooting
+
+#### Technical Implementation:
+- **Setup Script**: Automated broken cluster deployment
+- **Verification Scripts**: Automated step validation
+- **Progressive Difficulty**: From basic pod issues to complex networking
+- **Realistic Problems**: Mirror actual production failures
+- **Comprehensive Documentation**: Detailed step-by-step guidance
+
+This scenario fills the gap between Docker Compose and more advanced DevOps tools, providing essential Kubernetes troubleshooting skills for middle-level engineers.
+
+## Previous Work - Docker Compose Microservices Scenario (2025-09-09)
 
 ### Comprehensive Microservices Architecture Implementation
 
