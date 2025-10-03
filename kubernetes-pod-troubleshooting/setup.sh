@@ -53,21 +53,40 @@ curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/miniku
 chmod +x minikube
 mv minikube /usr/local/bin/
 
-echo "🎯 Starting Kubernetes cluster..."
-# Start minikube (simplified for reliability)
-minikube start --driver=docker --cpus=2 --memory=2048mb --kubernetes-version=v1.28.0
+echo "🎯 Checking for existing Kubernetes cluster..."
 
-# Wait for cluster
-echo "⏳ Waiting for cluster to be ready..."
-kubectl wait --for=condition=Ready nodes --all --timeout=300s
+# Check if cluster already exists (common in Killercoda)
+if kubectl cluster-info >/dev/null 2>&1; then
+    echo "✅ Existing Kubernetes cluster found!"
+    kubectl get nodes
+else
+    echo "🚀 Starting new minikube cluster..."
+    # Try different drivers based on environment
+    if [ -S /var/run/docker.sock ] && docker version >/dev/null 2>&1; then
+        echo "Using Docker driver..."
+        minikube start --driver=docker --cpus=2 --memory=2048mb --kubernetes-version=v1.28.0
+    else
+        echo "Using none driver for compatibility..."
+        minikube start --driver=none --kubernetes-version=v1.28.0
+    fi
 
-# Enable addons
-echo "🔧 Enabling ingress addon..."
-minikube addons enable ingress
+    # Wait for cluster
+    echo "⏳ Waiting for cluster to be ready..."
+    kubectl wait --for=condition=Ready nodes --all --timeout=300s
+fi
+
+# Enable addons if using minikube
+echo "🔧 Configuring ingress..."
+if command -v minikube >/dev/null 2>&1 && minikube status >/dev/null 2>&1; then
+    echo "Enabling minikube ingress addon..."
+    minikube addons enable ingress
+else
+    echo "Skipping ingress addon (not using minikube or cluster managed externally)"
+fi
 
 # Create namespace and directories
 echo "📁 Setting up application structure..."
-kubectl create namespace webapp
+kubectl create namespace webapp --dry-run=client -o yaml | kubectl apply -f -
 mkdir -p /root/k8s-app/{database,backend,frontend,redis,ingress}
 
 echo "💣 Deploying broken application components..."
