@@ -246,6 +246,97 @@ spec:
   type: ClusterIP
 EOF
 
+# Create solution ConfigMaps (for reference/hints)
+echo "📝 Creating solution ConfigMaps..."
+
+cat > /root/k8s-app/configmaps/api-config.yaml << 'EOF'
+# Solution: API ConfigMap with nginx configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: webapp
+data:
+  default.conf: |
+    server {
+        listen 3000;
+        location /health {
+            return 200 '{"status":"healthy"}\n';
+            add_header Content-Type application/json;
+        }
+        location / {
+            return 200 '{"message":"API is running"}\n';
+            add_header Content-Type application/json;
+        }
+    }
+EOF
+
+cat > /root/k8s-app/configmaps/nginx-config.yaml << 'EOF'
+# Solution: Frontend nginx ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config-missing
+  namespace: webapp
+data:
+  default.conf: |
+    server {
+        listen 80;
+        server_name localhost;
+
+        location / {
+            root /usr/share/nginx/html;
+            index index.html index.htm;
+            try_files $uri $uri/ /index.html;
+        }
+
+        location /api/ {
+            proxy_pass http://api-service:3000/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+    }
+EOF
+
+# Create solution deployment file
+cat > /root/k8s-app/deployments/api-deployment-SOLUTION.yaml << 'EOF'
+# Solution: Fixed API deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: webapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+      - name: api
+        image: nginx:alpine
+        ports:
+        - containerPort: 3000
+        volumeMounts:
+        - name: api-config
+          mountPath: /etc/nginx/conf.d
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+      volumes:
+      - name: api-config
+        configMap:
+          name: api-config
+EOF
+
 # Apply all broken manifests
 echo "🔥 Applying broken configurations from files..."
 kubectl apply -f /root/k8s-app/deployments/
