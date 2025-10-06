@@ -126,9 +126,9 @@ spec:
     spec:
       containers:
       - name: api
-        image: node:16-alpine
-        command: ["/bin/sh", "-c"]
-        args: ["echo 'Error: Cannot find module package.json' && sleep 2 && exit 1"]
+        image: busybox:1.36
+        command: ["sh", "-c"]
+        args: ["echo 'Error: Cannot find module /app/index.js' && echo 'Please check if api-code ConfigMap is mounted' && exit 1"]
         ports:
         - containerPort: 3000
         env:
