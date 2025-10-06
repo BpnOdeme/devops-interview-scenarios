@@ -239,12 +239,8 @@ spec:
   type: ClusterIP
 EOF
 
-# Apply broken manifests
-echo "🔥 Applying broken configurations..."
-kubectl apply -f /root/k8s-app/deployments/
-kubectl apply -f /root/k8s-app/services/
-
-# Create README
+# Create README before applying manifests
+echo "📝 Creating README and solution files..."
 cat > /root/k8s-app/README.md << 'EOF'
 # Kubernetes Troubleshooting Lab
 
@@ -275,9 +271,6 @@ cat > /root/k8s-app/README.md << 'EOF'
 - configmaps/ directory has ready-to-use solutions
 - Use `diff` to compare broken vs fixed files
 EOF
-
-# Create solution/hint files (not applied, just for reference)
-echo "📝 Creating solution reference files..."
 
 # Frontend nginx config hint
 cat > /root/k8s-app/configmaps/nginx-config.yaml << 'EOF'
@@ -368,6 +361,11 @@ spec:
         configMap:
           name: api-config
 EOF
+
+# Apply broken manifests
+echo "🔥 Applying broken configurations..."
+kubectl apply -f /root/k8s-app/deployments/
+kubectl apply -f /root/k8s-app/services/
 
 # Give time for pods to start failing
 sleep 10
