@@ -1,13 +1,37 @@
 #!/bin/bash
 
-# Verification script for Step 2: Fix Service Communication
+# Verification script for Step 2: Fix Service Communication and API Pods
 
-echo "Verifying Step 2: Service Communication..."
+echo "Verifying Step 2: Service Communication and API Pods..."
+
+# First check if API pods are running
+API_RUNNING=$(kubectl get pods -n webapp -l app=api --no-headers | grep -c "Running")
+API_READY=$(kubectl get pods -n webapp -l app=api -o jsonpath='{.items[*].status.containerStatuses[*].ready}' | grep -c "true")
+
+echo "API pods running: $API_RUNNING"
+echo "API pods ready: $API_READY"
+
+ERRORS=0
+
+if [ $API_RUNNING -lt 2 ]; then
+    echo "❌ API pods are not running (expected 2, found $API_RUNNING)"
+    ((ERRORS++))
+else
+    echo "✅ API pods are running"
+fi
+
+if [ $API_READY -lt 2 ]; then
+    echo "❌ API pods are not ready (expected 2, found $API_READY)"
+    ((ERRORS++))
+else
+    echo "✅ API pods are ready"
+fi
 
 # Check if services exist and have correct selectors
 SERVICES_COUNT=$(kubectl get svc -n webapp --no-headers | wc -l)
 ENDPOINTS_COUNT=$(kubectl get endpoints -n webapp --no-headers | grep -v "<none>" | wc -l)
 
+echo ""
 echo "Services found: $SERVICES_COUNT"
 echo "Services with endpoints: $ENDPOINTS_COUNT"
 
@@ -42,16 +66,18 @@ else
     ((MISSING_SERVICES++))
 fi
 
-if [ $MISSING_SERVICES -eq 0 ]; then
+TOTAL_ERRORS=$((ERRORS + MISSING_SERVICES))
+
+if [ $TOTAL_ERRORS -eq 0 ]; then
     echo ""
     echo "✅ Step 2 verification passed!"
-    echo "All services are properly configured and have endpoints."
+    echo "API pods are running and all services are properly configured."
     echo "Proceed to Step 3 to fix storage and database issues."
     exit 0
 else
     echo ""
     echo "❌ Step 2 verification failed!"
-    echo "$MISSING_SERVICES service issues remain."
-    echo "Fix the service configurations and try again."
+    echo "$TOTAL_ERRORS issues found (API pod issues: $ERRORS, Service issues: $MISSING_SERVICES)"
+    echo "Fix the API pods and service configurations, then try again."
     exit 1
 fi

@@ -16,7 +16,14 @@
 
 ## Recent Work - Kubernetes Pod Troubleshooting Scenario Updates (2025-10-06)
 
-### Updated Step Descriptions to Match Real Cluster State
+### Updated Step Descriptions and Setup to Match Real Cluster State
+
+#### Modified setup script to make API pods fail initially:
+
+**Changed API deployment behavior:**
+- API pods now crash with CrashLoopBackOff (exit 1 loop simulating missing package.json)
+- Added failing liveness probe to force pod restarts
+- This ensures all critical pods (Frontend, Postgres, API) are failing at start
 
 #### Aligned all step documentation with actual setup script behavior:
 
@@ -24,13 +31,16 @@
    - Updated expected findings to match real initial state
    - Frontend: ContainerCreating (missing ConfigMap: nginx-config-missing)
    - Postgres: Pending (wrong image tag: postgres:13-wrong, no PVC)
-   - API: Running but with application errors
+   - **API: CrashLoopBackOff (container exits, failing liveness probe)**
+   - Redis: Running (healthy reference pod)
    - Added more specific common issue patterns
 
-2. **Step 2 - Fix Service Communication**:
+2. **Step 2 - Fix Service Communication and API Pods**:
+   - **Added API pod fix as first task** (create ConfigMap with working Node.js code)
    - Corrected service selector fix (app: backend → app: api)
    - Added commands for creating missing services (frontend-service, postgres-service)
    - Updated DATABASE_URL fix instructions
+   - Updated verify-step2.sh to check API pods are Running and Ready (2/2)
    - Improved verification commands
 
 3. **Step 3 - Resolve Storage and Database Issues**:
@@ -46,10 +56,10 @@
    - Simplified ingress creation process
 
 5. **Step 5 - Optimize Resources and Verify Stack**:
-   - Added API application code solution (ConfigMap with Node.js code)
-   - Fixed the npm start issue with actual working code
-   - Updated resource monitoring commands
-   - Improved end-to-end testing procedures
+   - Removed API fix section (now handled in Step 2)
+   - Focused on resource monitoring and optimization
+   - Enhanced end-to-end testing procedures
+   - Added comprehensive health check verification
 
 #### Previous Work - Kubernetes Pod Troubleshooting Scenario (2025-10-03)
 

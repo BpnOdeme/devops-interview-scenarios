@@ -1,21 +1,124 @@
-# Step 2: Fix Service Communication
+# Step 2: Fix Service Communication and API Pods
 
 ## Overview
 
-Now that you've identified the pod issues, it's time to fix the networking and service communication problems. Services in Kubernetes need proper selectors and endpoints to route traffic correctly.
+Now that you've identified the pod issues, it's time to fix the API pods and networking problems. In this step, you'll get the API pods running and ensure services can communicate properly.
 
 ## Current Problems
 
-The services are misconfigured and cannot route traffic to the correct pods:
-- Service selectors don't match pod labels
-- Wrong service names are referenced in configurations
-- Endpoints are not being created properly
+Multiple issues need to be resolved:
+- **API pods**: CrashLoopBackOff - need working application code
+- **Service selectors**: Don't match pod labels
+- **Missing services**: Frontend and Postgres services don't exist
+- **Endpoints**: Not being created properly due to wrong selectors
 
 ## Tasks
 
-### 1. Check Service Configuration
+### 1. Fix API Pods First
 
-First, examine the current services and their endpoints:
+The API pods are crashing. Let's check the logs and fix them:
+
+```bash
+# Check API pod status
+kubectl get pods -n webapp -l app=api
+
+# Check pod logs to see the error
+kubectl logs deployment/api -n webapp
+
+# You'll see errors about missing package.json or application code
+```
+
+Create a working API application using a ConfigMap:
+
+```bash
+# Create ConfigMap with simple Node.js API
+kubectl create configmap api-code --from-literal=index.js='
+const http = require("http");
+const port = 3000;
+
+const server = http.createServer((req, res) => {
+  if (req.url === "/health") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ status: "healthy", timestamp: new Date() }));
+  } else {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({
+      message: "WebApp API",
+      version: "1.0.0",
+      endpoints: ["/health", "/"]
+    }));
+  }
+});
+
+server.listen(port, () => {
+  console.log(`API server running on port ${port}`);
+});
+' -n webapp
+
+# Update API deployment to use this code
+kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: webapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+      - name: api
+        image: node:16-alpine
+        command: ["/bin/sh", "-c"]
+        args: ["node /app/index.js"]
+        ports:
+        - containerPort: 3000
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://webapp_user:webapp_password@postgres-service:5432/webapp"
+        - name: REDIS_URL
+          value: "redis://redis-cache:6379"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        volumeMounts:
+        - name: api-code
+          mountPath: /app
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: api-code
+        configMap:
+          name: api-code
+EOF
+
+# Wait for pods to restart and become ready
+kubectl rollout status deployment/api -n webapp
+```
+
+### 2. Check Service Configuration
+
+Now examine the current services and their endpoints:
 
 ```bash
 # List all services in the webapp namespace
@@ -28,7 +131,7 @@ kubectl get endpoints -n webapp
 kubectl describe svc -n webapp
 ```
 
-### 2. Fix Service Selectors
+### 3. Fix Service Selectors
 
 The API service has an incorrect selector that doesn't match the pod labels. Let's check and fix it:
 
@@ -66,7 +169,7 @@ spec:
 EOF
 ```
 
-### 3. Create Missing Services
+### 4. Create Missing Services
 
 Some services are missing entirely. Create the frontend service:
 
@@ -88,7 +191,7 @@ spec:
 EOF
 ```
 
-### 4. Create Database Service
+### 5. Create Database Service
 
 The backend deployment references a database service that doesn't exist yet. Let's create it:
 
@@ -113,7 +216,7 @@ spec:
 EOF
 ```
 
-### 5. Fix Backend Database Connection
+### 6. Fix Backend Database Connection
 
 The API deployment has the wrong database service name in its environment variables:
 
@@ -129,7 +232,7 @@ kubectl get deployment api -n webapp -o yaml | grep DATABASE_URL
 kubectl set env deployment/api -n webapp DATABASE_URL="postgresql://user:pass@postgres-service:5432/webapp"
 ```
 
-### 6. Verify Service Communication
+### 7. Verify Service Communication
 
 Test that services can resolve DNS names correctly and have proper endpoints:
 
@@ -149,10 +252,13 @@ kubectl get endpoints postgres-service -n webapp
 
 ## Expected Results
 
-After fixing the service issues:
-- All services should have valid endpoints
-- DNS resolution should work between services
-- Pod-to-pod communication should be functional
+After completing this step:
+- ✅ API pods should be Running and healthy (2/2 ready)
+- ✅ All services should have valid endpoints
+- ✅ DNS resolution should work between services
+- ✅ Service selectors should match pod labels
+- ⚠️ Frontend still ContainerCreating (will fix in Step 4)
+- ⚠️ Postgres still Pending (will fix in Step 3)
 
 ## Verification Commands
 

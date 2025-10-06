@@ -7,11 +7,11 @@ In this final step, you'll optimize resource allocations, fix any remaining issu
 ## Current Problems
 
 At this stage, you should have:
-- ✅ Frontend pod running (ConfigMap created)
-- ✅ PostgreSQL pod running (image fixed, PVC created, env vars added)
+- ✅ Frontend pod running (ConfigMap created in Step 4)
+- ✅ PostgreSQL pod running (image fixed, PVC created, env vars added in Step 3)
+- ✅ API pods running (application code fixed in Step 2)
 - ✅ Redis pod running (was already working)
-- ⚠️ API pods may need resource optimization and proper application code
-- ⚠️ Need to verify end-to-end functionality
+- ⚠️ Need to verify end-to-end functionality and test complete stack
 
 ## Tasks
 
@@ -33,105 +33,7 @@ kubectl get endpoints -n webapp
 kubectl get ingress -n webapp
 ```
 
-### 2. Check API Pod Logs
-
-The API pods might be running but could have application errors:
-
-```bash
-# Check API pod logs
-kubectl logs deployment/api -n webapp
-
-# You should see errors about missing package.json or npm start failure
-```
-
-### 3. Fix Backend API Application Issue
-
-The API deployment is trying to run `npm start` but there's no package.json. Let's create a simple working API:
-
-```bash
-# Create a ConfigMap with a simple Node.js application
-kubectl create configmap api-code --from-literal=index.js='
-const http = require("http");
-const port = 3000;
-
-const server = http.createServer((req, res) => {
-  if (req.url === "/health") {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ status: "healthy", timestamp: new Date() }));
-  } else {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({
-      message: "WebApp API",
-      version: "1.0.0",
-      endpoints: ["/health", "/"]
-    }));
-  }
-});
-
-server.listen(port, () => {
-  console.log(`API server running on port ${port}`);
-});
-' -n webapp
-
-# Update API deployment to use this code
-kubectl apply -f - <<EOF
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: api
-  namespace: webapp
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: api
-  template:
-    metadata:
-      labels:
-        app: api
-    spec:
-      containers:
-      - name: api
-        image: node:16-alpine
-        command: ["/bin/sh", "-c"]
-        args: ["node /app/index.js"]
-        ports:
-        - containerPort: 3000
-        env:
-        - name: DATABASE_URL
-          value: "postgresql://webapp_user:webapp_password@postgres-service:5432/webapp"
-        - name: REDIS_URL
-          value: "redis://redis-cache:6379"
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
-        volumeMounts:
-        - name: api-code
-          mountPath: /app
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 10
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 5
-      volumes:
-      - name: api-code
-        configMap:
-          name: api-code
-EOF
-```
-
-### 4. Monitor Resource Usage
+### 2. Monitor Resource Usage
 
 Check if pods have sufficient resources:
 
@@ -149,7 +51,7 @@ kubectl describe pods -n webapp | grep -A 5 -B 5 "Requests\|Limits"
 kubectl get events -n webapp --field-selector reason=FailedScheduling
 ```
 
-### 5. Test Complete Application Stack
+### 3. Test Complete Application Stack
 
 Perform end-to-end testing of the complete application:
 
@@ -173,7 +75,7 @@ kubectl exec -it deployment/api -n webapp -- wget -qO- http://postgres-service:5
 kubectl exec -it deployment/api -n webapp -- wget -qO- http://redis-cache:6379 || echo "Redis connection test"
 ```
 
-### 6. Verify Pod Health and Logs
+### 4. Verify Pod Health and Logs
 
 Verify all services are working properly:
 
@@ -188,7 +90,7 @@ kubectl logs deployment/redis -n webapp
 kubectl get events -n webapp --sort-by='.lastTimestamp' | tail -20
 ```
 
-### 7. Final Health Check
+### 5. Final Health Check
 
 ```bash
 # Check pod readiness and liveness
