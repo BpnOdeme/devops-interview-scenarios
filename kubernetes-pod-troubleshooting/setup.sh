@@ -413,6 +413,81 @@ kubectl apply -f /root/k8s-app/ingress/
 echo "⏳ Waiting for pods to start..."
 sleep 15
 
+# Copy verify scripts to /usr/local/bin for easy access
+echo "📋 Installing verify scripts..."
+cat > /usr/local/bin/verify-step2 << 'VERIFY_EOF'
+#!/bin/bash
+echo "Verifying Step 2: Service Communication and API Pods..."
+
+# Check if API pods are running
+API_RUNNING=$(kubectl get pods -n webapp -l app=api --no-headers 2>/dev/null | grep -c "Running")
+API_READY=$(kubectl get pods -n webapp -l app=api -o jsonpath='{.items[*].status.containerStatuses[*].ready}' 2>/dev/null | grep -c "true")
+
+echo "API pods running: $API_RUNNING"
+echo "API pods ready: $API_READY"
+
+ERRORS=0
+
+if [ $API_RUNNING -lt 2 ]; then
+    echo "❌ API pods are not running (expected 2, found $API_RUNNING)"
+    ((ERRORS++))
+else
+    echo "✅ API pods are running"
+fi
+
+if [ $API_READY -lt 2 ]; then
+    echo "❌ API pods are not ready (expected 2, found $API_READY)"
+    ((ERRORS++))
+else
+    echo "✅ API pods are ready"
+fi
+
+# Check specific services
+REQUIRED_SERVICES=("api-service" "frontend-service" "postgres-service" "redis-cache")
+MISSING_SERVICES=0
+
+echo ""
+for service in "${REQUIRED_SERVICES[@]}"; do
+    if kubectl get svc $service -n webapp >/dev/null 2>&1; then
+        echo "✅ Service $service exists"
+        ENDPOINTS=$(kubectl get endpoints $service -n webapp -o jsonpath='{.subsets[0].addresses}' 2>/dev/null)
+        if [ -n "$ENDPOINTS" ] && [ "$ENDPOINTS" != "null" ]; then
+            echo "  ✅ Service $service has endpoints"
+        else
+            echo "  ❌ Service $service has no endpoints"
+            ((MISSING_SERVICES++))
+        fi
+    else
+        echo "❌ Service $service is missing"
+        ((MISSING_SERVICES++))
+    fi
+done
+
+# Check API service selector
+API_SELECTOR=$(kubectl get svc api-service -n webapp -o jsonpath='{.spec.selector.app}' 2>/dev/null)
+if [ "$API_SELECTOR" = "api" ]; then
+    echo "✅ API service has correct selector"
+else
+    echo "❌ API service selector is incorrect: $API_SELECTOR (should be 'api')"
+    ((MISSING_SERVICES++))
+fi
+
+TOTAL_ERRORS=$((ERRORS + MISSING_SERVICES))
+
+echo ""
+if [ $TOTAL_ERRORS -eq 0 ]; then
+    echo "✅ Step 2 verification passed!"
+    echo "Proceed to Step 3."
+    exit 0
+else
+    echo "❌ Step 2 verification failed!"
+    echo "$TOTAL_ERRORS issues found"
+    exit 1
+fi
+VERIFY_EOF
+
+chmod +x /usr/local/bin/verify-step2
+
 # Create README for troubleshooting guidance
 cat > /root/k8s-app/README.md << 'EOF'
 # Kubernetes Pod Troubleshooting Lab

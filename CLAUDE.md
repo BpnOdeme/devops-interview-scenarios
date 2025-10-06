@@ -14,7 +14,86 @@
 - Her git commit atmadan önce mutlaka rootdaki CLAUDE.md file güncelle
 - Her commit atıldığında root dizindeki CLAUDE.md file güncelle, md fileları güncelle
 
-## Recent Work - DevOps-Focused Kubernetes Troubleshooting (2025-10-06)
+## Recent Work - Killercoda Compatibility Fixes (2025-10-06)
+
+### Fixed Container Command Compatibility and Verification Scripts
+
+**Major Issues Resolved:**
+- **Container command compatibility** - Fixed all commands to use container-native tools
+- **Storage class issues** - Updated to use Killercoda's `local-path` storage class
+- **Directory structure** - Organized files into proper GitOps structure
+- **Verification scripts** - Implemented inline verify scripts in setup.sh
+
+### Changes Made:
+
+#### 1. Container Command Fixes:
+- **Replaced wget**: Not available in postgres/nginx containers
+- **Replaced nslookup**: Not available in nginx:alpine
+- **Solution**: Use `getent hosts` for DNS resolution (available in all alpine images)
+- **Database tests**: Use `pg_isready` instead of wget
+- **Redis tests**: Use `redis-cli ping` instead of wget
+
+#### 2. Storage Class Updates:
+- **Changed from**: `storageClassName: standard` or `fast-ssd-missing`
+- **Changed to**: `storageClassName: local-path`
+- **Reason**: Killercoda kubernetes-kubeadm-1node backend uses local-path by default
+- **Updated files**: step3.md, postgres-pvc-SOLUTION.yaml
+
+#### 3. Directory Structure Reorganization:
+- **Before**: Mixed structure with backend/, frontend/, database/
+- **After**: Proper Kubernetes structure:
+  ```
+  /root/k8s-app/
+  ├── deployments/     (all deployment YAML files)
+  ├── services/        (service definitions)
+  ├── storage/         (PVC definitions)
+  ├── configmaps/      (ConfigMap definitions)
+  ├── ingress/         (ingress definitions)
+  └── README.md        (troubleshooting guide)
+  ```
+
+#### 4. Solution File Pattern:
+- **Created *-SOLUTION.yaml files** for reference
+- **api-deployment-SOLUTION.yaml**: Fixed deployment with correct ConfigMap reference
+- **postgres-deployment-SOLUTION.yaml**: Fixed image tag, env vars, resources
+- **postgres-pvc-SOLUTION.yaml**: Fixed storage class and claim name
+- **api-config.yaml**: Prepared nginx configuration for API
+- **nginx-config.yaml**: Prepared nginx configuration for frontend
+
+#### 5. Inline Verification Scripts:
+- **Problem**: Killercoda not loading separate verify-*.sh files from index.json
+- **Solution**: Embed verification scripts directly in setup.sh
+- **Implementation**: Added verify-step2 script to /usr/local/bin
+- **Script checks**:
+  - API pods running (2/2)
+  - API pods ready (2/2)
+  - All 4 services exist (api-service, frontend-service, postgres-service, redis-cache)
+  - All services have endpoints
+  - API service selector is correct (app=api)
+
+#### 6. Updated All Step Documentation:
+- **Step 2**: Changed to use `getent hosts` for DNS tests
+- **Step 3**: Updated storage class to local-path
+- **Step 4**: Changed to apply prepared ConfigMap files
+- **Step 5**: Fixed all container commands to use native tools
+
+### DevOps Skills Now Tested:
+1. ✅ kubectl troubleshooting commands (get, describe, logs, events)
+2. ✅ YAML manifest editing and validation
+3. ✅ ConfigMap and volume mount understanding
+4. ✅ Service selector debugging
+5. ✅ PVC and storage class management
+6. ✅ Image repository and tag troubleshooting
+7. ✅ Resource limits tuning
+8. ✅ Ingress configuration
+9. ✅ Systematic debugging methodology
+10. ✅ Container-native command usage
+
+**No Application Code Required** - Pure DevOps/SRE focus!
+
+---
+
+## Previous Work - DevOps-Focused Kubernetes Troubleshooting (2025-10-06)
 
 ### Refactored for Pure DevOps Skills Assessment
 
@@ -48,7 +127,7 @@
 - Emphasized DevOps skills over development skills
 - Added "Key DevOps Takeaways" section
 
-### DevOps Skills Now Tested:
+### DevOps Skills Tested:
 1. ✅ kubectl troubleshooting commands (get, describe, logs, events)
 2. ✅ YAML manifest editing and validation
 3. ✅ ConfigMap and volume mount understanding
