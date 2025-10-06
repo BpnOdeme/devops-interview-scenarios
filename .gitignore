@@ -1,0 +1,19 @@
+# Solution guides (not for sharing publicly)
+**/SOLUTION.md
+**/solution.pdf
+**/*-solution.pdf
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
