@@ -272,6 +272,9 @@ cat > /root/k8s-app/README.md << 'EOF'
 - Use `diff` to compare broken vs fixed files
 EOF
 
+# Create solution ConfigMaps
+echo "Creating solution ConfigMaps in /root/k8s-app/configmaps/..."
+
 # Frontend nginx config hint
 cat > /root/k8s-app/configmaps/nginx-config.yaml << 'EOF'
 # Hint: Frontend needs this ConfigMap with correct name
@@ -361,6 +364,11 @@ spec:
         configMap:
           name: api-config
 EOF
+
+# Verify solution files were created
+echo "Verifying solution files..."
+ls -la /root/k8s-app/configmaps/
+ls -la /root/k8s-app/deployments/*SOLUTION*
 
 # Apply broken manifests
 echo "🔥 Applying broken configurations..."
