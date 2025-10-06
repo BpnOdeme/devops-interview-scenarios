@@ -208,8 +208,8 @@ kubectl get endpoints -n webapp
 # Verify API service now has endpoints
 kubectl describe svc api-service -n webapp
 
-# Test DNS resolution from a running pod
-kubectl exec -it deployment/redis -n webapp -- nslookup api-service.webapp.svc.cluster.local
+# Test DNS resolution from a running pod (using getent - available in alpine)
+kubectl exec -it deployment/redis -n webapp -- getent hosts api-service
 
 # Verify postgres service (once pod is running)
 kubectl get endpoints postgres-service -n webapp
@@ -231,8 +231,8 @@ After completing this step:
 # Verify services have correct selectors and endpoints
 kubectl get svc,endpoints -n webapp
 
-# Test DNS resolution from API pod
-kubectl exec -it deployment/api -n webapp -- nslookup postgres-service
+# Test DNS resolution from API pod (using getent)
+kubectl exec -it deployment/api -n webapp -- getent hosts postgres-service
 ```
 
 **Next**: Once services can communicate properly, proceed to fix storage and database issues.

@@ -68,9 +68,9 @@ curl -H "Host: webapp.local" http://$(minikube ip)/api/health
 # Test API endpoints
 curl -H "Host: webapp.local" http://$(minikube ip)/api/users
 
-# Test DNS resolution from API pod
-kubectl exec -it deployment/api -n webapp -- nslookup postgres-service
-kubectl exec -it deployment/api -n webapp -- nslookup redis-cache
+# Test DNS resolution from API pod (using getent - works in alpine)
+kubectl exec -it deployment/api -n webapp -- getent hosts postgres-service
+kubectl exec -it deployment/api -n webapp -- getent hosts redis-cache
 
 # Test actual database connection (from postgres pod)
 kubectl exec -it deployment/postgres -n webapp -- pg_isready -U webapp_user
