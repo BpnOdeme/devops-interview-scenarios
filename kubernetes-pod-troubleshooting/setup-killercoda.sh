@@ -128,7 +128,7 @@ spec:
       - name: api
         image: node:16-alpine
         command: ["/bin/sh", "-c"]
-        args: ["while true; do echo 'Error: Cannot find module package.json'; sleep 2; exit 1; done"]
+        args: ["echo 'Error: Cannot find module package.json' && sleep 2 && exit 1"]
         ports:
         - containerPort: 3000
         env:
@@ -141,13 +141,6 @@ spec:
           limits:
             memory: "64Mi"   # Too low
             cpu: "200m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          failureThreshold: 1
 EOF
 
 # Create broken API service
