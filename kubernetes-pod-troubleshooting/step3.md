@@ -39,7 +39,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: standard  # Use 'standard' or available storage class from kubectl get sc
+  storageClassName: local-path  # Use available storage class from 'kubectl get sc'
   resources:
     requests:
       storage: 1Gi

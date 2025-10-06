@@ -298,6 +298,71 @@ data:
     }
 EOF
 
+# Create solution PVC file
+cat > /root/k8s-app/storage/postgres-pvc-SOLUTION.yaml << 'EOF'
+# Solution: Fixed PVC with correct storage class
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: webapp
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path  # Fixed: Use available storage class
+  resources:
+    requests:
+      storage: 1Gi
+EOF
+
+# Create solution postgres deployment file
+cat > /root/k8s-app/deployments/postgres-deployment-SOLUTION.yaml << 'EOF'
+# Solution: Fixed PostgreSQL deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:13  # Fixed: Correct image tag
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: webapp
+        - name: POSTGRES_USER  # Fixed: Added user
+          value: webapp_user
+        - name: POSTGRES_PASSWORD  # Fixed: Added password
+          value: webapp_password
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        resources:
+          requests:
+            memory: "256Mi"  # Fixed: Increased memory
+            cpu: "250m"
+          limits:
+            memory: "512Mi"  # Fixed: Increased memory
+            cpu: "500m"
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+EOF
+
 # Create solution deployment file
 cat > /root/k8s-app/deployments/api-deployment-SOLUTION.yaml << 'EOF'
 # Solution: Fixed API deployment
@@ -358,12 +423,30 @@ This lab contains intentionally broken Kubernetes configurations for troubleshoo
 ## Directory Structure
 ```
 k8s-app/
-├── deployments/     # Application deployments
-├── services/        # Service definitions
-├── storage/         # PVC and storage configs
-├── ingress/         # Ingress configurations
-└── configmaps/      # ConfigMap definitions (create as needed)
+├── README.md
+├── deployments/
+│   ├── api-deployment.yaml (BROKEN)
+│   ├── api-deployment-SOLUTION.yaml
+│   ├── frontend-deployment.yaml (BROKEN)
+│   ├── postgres-deployment.yaml (BROKEN)
+│   ├── postgres-deployment-SOLUTION.yaml
+│   └── redis-deployment.yaml (working)
+├── services/
+│   └── api-service.yaml (BROKEN - wrong selector)
+├── storage/
+│   ├── postgres-pvc.yaml (BROKEN - wrong storageClassName)
+│   └── postgres-pvc-SOLUTION.yaml
+├── ingress/
+│   └── webapp-ingress.yaml (BROKEN)
+└── configmaps/
+    ├── api-config.yaml (SOLUTION)
+    └── nginx-config.yaml (SOLUTION)
 ```
+
+## Solution Files
+Use `*-SOLUTION.yaml` files for reference:
+- `diff deployments/postgres-deployment{,-SOLUTION}.yaml`
+- `diff storage/postgres-pvc{,-SOLUTION}.yaml`
 
 ## Known Issues to Fix
 1. **PostgreSQL**: Wrong image tag, missing env vars, low resources
