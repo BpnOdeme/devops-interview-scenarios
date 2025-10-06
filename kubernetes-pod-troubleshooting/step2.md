@@ -16,103 +16,65 @@ Multiple issues need to be resolved:
 
 ### 1. Fix API Pods First
 
-The API pods are crashing. Let's check the logs and fix them:
+The API pods are in ContainerCreating or CrashLoopBackOff state. Let's investigate:
 
 ```bash
 # Check API pod status
 kubectl get pods -n webapp -l app=api
 
-# Check pod logs to see the error
-kubectl logs deployment/api -n webapp
+# Describe the pod to see what's wrong
+kubectl describe pod -l app=api -n webapp
 
-# You'll see errors about missing package.json or application code
+# You'll see: MountVolume.SetUp failed - configmap "api-config-missing" not found
 ```
 
-Create a working API application using a ConfigMap:
+The API deployment references a missing ConfigMap. Let's check the deployment and fix it:
 
 ```bash
-# Create ConfigMap with simple Node.js API
-kubectl create configmap api-code --from-literal=index.js='
-const http = require("http");
-const port = 3000;
+# Check current deployment
+kubectl get deployment api -n webapp -o yaml | grep -A 5 "volumes:"
 
-const server = http.createServer((req, res) => {
-  if (req.url === "/health") {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ status: "healthy", timestamp: new Date() }));
-  } else {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({
-      message: "WebApp API",
-      version: "1.0.0",
-      endpoints: ["/health", "/"]
-    }));
-  }
-});
+# Look at the broken deployment file
+cat /root/k8s-app/backend/api-deployment.yaml
 
-server.listen(port, () => {
-  console.log(`API server running on port ${port}`);
-});
-' -n webapp
+# Compare with the fixed version
+cat /root/k8s-app/backend/api-deployment-fixed.yaml
+```
 
-# Update API deployment to use this code
-kubectl apply -f - <<EOF
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: api
-  namespace: webapp
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: api
-  template:
-    metadata:
-      labels:
-        app: api
-    spec:
-      containers:
-      - name: api
-        image: node:16-alpine
-        command: ["/bin/sh", "-c"]
-        args: ["node /app/index.js"]
-        ports:
-        - containerPort: 3000
-        env:
-        - name: DATABASE_URL
-          value: "postgresql://webapp_user:webapp_password@postgres-service:5432/webapp"
-        - name: REDIS_URL
-          value: "redis://redis-cache:6379"
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
-        volumeMounts:
-        - name: api-code
-          mountPath: /app
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 10
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 5
-      volumes:
-      - name: api-code
-        configMap:
-          name: api-code
-EOF
+**Issues found:**
+1. ConfigMap name is wrong: `api-config-missing` → should be `api-config`
+2. Container port is wrong: `80` → should be `3000`
+3. Resources too low: need more memory
 
-# Wait for pods to restart and become ready
+**Fix Option 1 - Create the ConfigMap:**
+```bash
+# Create the missing ConfigMap
+kubectl apply -f /root/k8s-app/backend/api-config.yaml
+
+# Pods should start now
+kubectl get pods -n webapp -l app=api
+```
+
+**Fix Option 2 - Edit the deployment directly:**
+```bash
+# Edit the deployment
+kubectl edit deployment api -n webapp
+
+# Change:
+# - configMap name from 'api-config-missing' to 'api-config'
+# - containerPort from 80 to 3000
+# - memory requests/limits to 128Mi/256Mi
+```
+
+**Fix Option 3 - Apply the corrected deployment:**
+```bash
+# Apply the fixed deployment
+kubectl apply -f /root/k8s-app/backend/api-deployment-fixed.yaml
+
+# But still need to create the ConfigMap
+kubectl apply -f /root/k8s-app/backend/api-config.yaml
+
+# Wait for rollout
 kubectl rollout status deployment/api -n webapp
 ```
 

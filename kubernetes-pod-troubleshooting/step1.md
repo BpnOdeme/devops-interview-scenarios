@@ -60,7 +60,7 @@ Based on the pod descriptions and events, identify these common issues:
 You should discover several issues:
 - **Frontend pod**: ContainerCreating state - references non-existent ConfigMap (`nginx-config-missing`)
 - **Postgres pod**: Pending state - wrong image tag (`postgres:13-wrong`) and missing PersistentVolumeClaim
-- **API pods**: CrashLoopBackOff state - container exits with errors, failing liveness probe (check logs for details)
+- **API pods**: ContainerCreating or CrashLoopBackOff - missing ConfigMap (`api-config-missing`) and wrong container port
 - **Redis pod**: Running successfully (this is the healthy reference)
 - **Resource limits**: Several pods have insufficient memory allocations
 

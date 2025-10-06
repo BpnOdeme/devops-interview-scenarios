@@ -14,7 +14,56 @@
 - Her git commit atmadan önce mutlaka rootdaki CLAUDE.md file güncelle
 - Her commit atıldığında root dizindeki CLAUDE.md file güncelle, md fileları güncelle
 
-## Recent Work - Kubernetes Pod Troubleshooting Scenario Updates (2025-10-06)
+## Recent Work - DevOps-Focused Kubernetes Troubleshooting (2025-10-06)
+
+### Refactored for Pure DevOps Skills Assessment
+
+**Major Philosophy Change:**
+- **Removed all code writing tasks** - DevOps should not write application code
+- **Focus on kubectl and YAML** - pure infrastructure/configuration management
+- **Prepared hint files** - reference solutions available in /root/k8s-app/ directories
+
+### Changes Made:
+
+#### 1. Setup Script Enhancement:
+- **API Container**: Changed to nginx:alpine with missing ConfigMap (api-config-missing)
+- **Added hint files**: api-config.yaml, api-deployment-fixed.yaml, nginx-config.yaml
+- **ConfigMap approach**: Simple nginx configs instead of Node.js code
+- Candidates use `kubectl apply -f` on prepared files or `kubectl edit` to fix
+
+#### 2. Step 2 Redesign (API Pods):
+- **Before**: Created Node.js code inline with kubectl create configmap --from-literal
+- **After**: Apply prepared nginx ConfigMap from hint file
+- **Skills tested**: Understanding ConfigMap references, YAML editing, kubectl apply
+- **Options provided**: kubectl edit vs kubectl apply -f approaches
+
+#### 3. Step 4 Simplification (Frontend):
+- **Before**: Created ConfigMap with inline YAML heredoc
+- **After**: Apply prepared nginx-config.yaml file
+- **DevOps focus**: File-based configuration management
+
+#### 4. Updated SOLUTION.md:
+- All solutions now use prepared YAML files
+- Multiple solution paths documented (kubectl edit vs apply)
+- Emphasized DevOps skills over development skills
+- Added "Key DevOps Takeaways" section
+
+### DevOps Skills Now Tested:
+1. ✅ kubectl troubleshooting commands (get, describe, logs, events)
+2. ✅ YAML manifest editing and validation
+3. ✅ ConfigMap and volume mount understanding
+4. ✅ Service selector debugging
+5. ✅ PVC and storage class management
+6. ✅ Image repository and tag troubleshooting
+7. ✅ Resource limits tuning
+8. ✅ Ingress configuration
+9. ✅ Systematic debugging methodology
+
+**No Application Code Required** - Pure DevOps/SRE focus!
+
+---
+
+## Previous Work - Kubernetes Pod Troubleshooting Scenario Updates (2025-10-06)
 
 ### Updated Step Descriptions and Setup to Match Real Cluster State
 

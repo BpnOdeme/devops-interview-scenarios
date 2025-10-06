@@ -126,14 +126,15 @@ spec:
     spec:
       containers:
       - name: api
-        image: busybox:1.36
-        command: ["sh", "-c"]
-        args: ["echo 'Error: Cannot find module /app/index.js' && echo 'Please check if api-code ConfigMap is mounted' && exit 1"]
+        image: nginx:alpine
         ports:
-        - containerPort: 3000
+        - containerPort: 80  # Wrong port - should be 3000
         env:
         - name: DATABASE_URL
           value: "postgresql://user:pass@postgres-wrong:5432/webapp"  # Wrong service
+        volumeMounts:
+        - name: api-config
+          mountPath: /etc/nginx/conf.d
         resources:
           requests:
             memory: "32Mi"   # Too low
@@ -141,6 +142,10 @@ spec:
           limits:
             memory: "64Mi"   # Too low
             cpu: "200m"
+      volumes:
+      - name: api-config
+        configMap:
+          name: api-config-missing  # ConfigMap doesn't exist - causes crash
 EOF
 
 # Create broken API service
@@ -241,6 +246,99 @@ kubectl apply -f /root/k8s-app/backend/
 kubectl apply -f /root/k8s-app/frontend/
 kubectl apply -f /root/k8s-app/redis/
 
+# Create solution/hint files (not applied, just for reference)
+echo "📝 Creating solution reference files..."
+
+# Frontend nginx config hint
+cat > /root/k8s-app/frontend/nginx-config.yaml << 'EOF'
+# Hint: Frontend needs this ConfigMap with correct name
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config-missing  # Must match deployment reference
+  namespace: webapp
+data:
+  default.conf: |
+    server {
+        listen 80;
+        server_name localhost;
+
+        location / {
+            root /usr/share/nginx/html;
+            index index.html index.htm;
+            try_files $uri $uri/ /index.html;
+        }
+
+        location /api/ {
+            proxy_pass http://api-service:3000/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+    }
+EOF
+
+# API config hint
+cat > /root/k8s-app/backend/api-config.yaml << 'EOF'
+# Hint: API needs this ConfigMap to work
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: webapp
+data:
+  default.conf: |
+    server {
+        listen 3000;
+        location /health {
+            return 200 '{"status":"healthy"}\n';
+            add_header Content-Type application/json;
+        }
+        location / {
+            return 200 '{"message":"API is running"}\n';
+            add_header Content-Type application/json;
+        }
+    }
+EOF
+
+# Fixed API deployment hint
+cat > /root/k8s-app/backend/api-deployment-fixed.yaml << 'EOF'
+# Hint: Compare this with api-deployment.yaml to see what needs fixing
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: webapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+      - name: api
+        image: nginx:alpine
+        ports:
+        - containerPort: 3000
+        volumeMounts:
+        - name: api-config
+          mountPath: /etc/nginx/conf.d
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+      volumes:
+      - name: api-config
+        configMap:
+          name: api-config
+EOF
+
 # Give time for pods to start failing
 sleep 10
 
@@ -256,6 +354,7 @@ echo "🎯 Your mission: Fix all the failing pods and get the application runnin
 echo ""
 echo "💡 Start with: kubectl get pods -n webapp"
 echo "💡 Then investigate: kubectl describe pod <pod-name> -n webapp"
+echo "💡 Hint files available in /root/k8s-app/ directories (check *-fixed.yaml files)"
 
 # Create completion marker
 touch /tmp/setup-complete

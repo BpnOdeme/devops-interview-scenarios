@@ -37,45 +37,29 @@ kubectl wait --namespace ingress-nginx \
 
 ### 2. Create Missing ConfigMap for Frontend
 
-The frontend pod is stuck in ContainerCreating because it references `nginx-config-missing`. Let's create the correct ConfigMap:
+The frontend pod is stuck in ContainerCreating because it references `nginx-config-missing`. Let's investigate and fix:
 
 ```bash
 # Check what ConfigMap the frontend deployment is looking for
 kubectl describe deployment frontend -n webapp | grep -A 5 "Volumes:"
 
-# Create the nginx-config ConfigMap
-kubectl apply -f - <<EOF
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: nginx-config-missing  # Must match the deployment reference
-  namespace: webapp
-data:
-  default.conf: |
-    server {
-        listen 80;
-        server_name localhost;
+# Check the broken deployment
+kubectl describe pod -l app=frontend -n webapp
 
-        location / {
-            root /usr/share/nginx/html;
-            index index.html index.htm;
-            try_files $uri $uri/ /index.html;
-        }
+# You'll see: MountVolume.SetUp failed - configmap "nginx-config-missing" not found
+```
 
-        location /api/ {
-            proxy_pass http://api-service:3000/;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
+**Fix - Apply the prepared ConfigMap:**
 
-        error_page 500 502 503 504 /50x.html;
-        location = /50x.html {
-            root /usr/share/nginx/html;
-        }
-    }
-EOF
+```bash
+# Check the ConfigMap file (already prepared in setup)
+cat /root/k8s-app/frontend/nginx-config.yaml
+
+# Apply it
+kubectl apply -f /root/k8s-app/frontend/nginx-config.yaml
+
+# Watch the frontend pod start
+kubectl get pods -n webapp -l app=frontend -w
 ```
 
 ### 3. Verify Frontend Pod Status
