@@ -68,12 +68,12 @@ minikube addons enable ingress
 # Create namespace and directories
 echo "📁 Setting up application structure..."
 kubectl create namespace webapp
-mkdir -p /root/k8s-app/{database,backend,frontend,redis,ingress}
+mkdir -p /root/k8s-app/{deployments,services,storage,ingress,configmaps}
 
 echo "💣 Deploying broken application components..."
 
 # Create broken PostgreSQL deployment
-cat > /root/k8s-app/database/postgres-deployment.yaml << 'EOF'
+cat > /root/k8s-app/deployments/postgres-deployment.yaml << 'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -108,7 +108,7 @@ spec:
 EOF
 
 # Create broken API deployment
-cat > /root/k8s-app/backend/api-deployment.yaml << 'EOF'
+cat > /root/k8s-app/deployments/api-deployment.yaml << 'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -149,7 +149,7 @@ spec:
 EOF
 
 # Create broken API service
-cat > /root/k8s-app/backend/api-service.yaml << 'EOF'
+cat > /root/k8s-app/services/api-service.yaml << 'EOF'
 apiVersion: v1
 kind: Service
 metadata:
@@ -165,7 +165,7 @@ spec:
 EOF
 
 # Create broken frontend deployment
-cat > /root/k8s-app/frontend/frontend-deployment.yaml << 'EOF'
+cat > /root/k8s-app/deployments/frontend-deployment.yaml << 'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -196,7 +196,7 @@ spec:
 EOF
 
 # Create working Redis deployment for comparison
-cat > /root/k8s-app/redis/redis-deployment.yaml << 'EOF'
+cat > /root/k8s-app/deployments/redis-deployment.yaml << 'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -241,16 +241,46 @@ EOF
 
 # Apply broken manifests
 echo "🔥 Applying broken configurations..."
-kubectl apply -f /root/k8s-app/database/
-kubectl apply -f /root/k8s-app/backend/
-kubectl apply -f /root/k8s-app/frontend/
-kubectl apply -f /root/k8s-app/redis/
+kubectl apply -f /root/k8s-app/deployments/
+kubectl apply -f /root/k8s-app/services/
+
+# Create README
+cat > /root/k8s-app/README.md << 'EOF'
+# Kubernetes Troubleshooting Lab
+
+## Directory Structure
+
+```
+/root/k8s-app/
+├── README.md                    # This file
+├── deployments/                 # Deployment manifests
+│   ├── api-deployment.yaml      # Broken API deployment
+│   ├── api-deployment-SOLUTION.yaml  # Fixed version (solution reference)
+│   ├── frontend-deployment.yaml
+│   ├── postgres-deployment.yaml
+│   └── redis-deployment.yaml
+├── services/                    # Service manifests
+│   └── api-service.yaml         # Broken service selector
+├── storage/                     # PVC manifests (to be created)
+│   └── postgres-pvc.yaml        # You need to create this
+├── ingress/                     # Ingress manifests (to be created)
+│   └── webapp-ingress.yaml
+└── configmaps/                  # Solution hints
+    ├── api-config.yaml          # Solution for API ConfigMap
+    └── nginx-config.yaml        # Solution for frontend ConfigMap
+
+## Tips
+
+- Check *-SOLUTION.yaml files for hints
+- configmaps/ directory has ready-to-use solutions
+- Use `diff` to compare broken vs fixed files
+EOF
 
 # Create solution/hint files (not applied, just for reference)
 echo "📝 Creating solution reference files..."
 
 # Frontend nginx config hint
-cat > /root/k8s-app/frontend/nginx-config.yaml << 'EOF'
+cat > /root/k8s-app/configmaps/nginx-config.yaml << 'EOF'
 # Hint: Frontend needs this ConfigMap with correct name
 apiVersion: v1
 kind: ConfigMap
@@ -278,7 +308,7 @@ data:
 EOF
 
 # API config hint
-cat > /root/k8s-app/backend/api-config.yaml << 'EOF'
+cat > /root/k8s-app/configmaps/api-config.yaml << 'EOF'
 # Hint: API needs this ConfigMap to work
 apiVersion: v1
 kind: ConfigMap
@@ -301,7 +331,7 @@ data:
 EOF
 
 # Fixed API deployment hint
-cat > /root/k8s-app/backend/api-deployment-fixed.yaml << 'EOF'
+cat > /root/k8s-app/deployments/api-deployment-SOLUTION.yaml << 'EOF'
 # Hint: Compare this with api-deployment.yaml to see what needs fixing
 apiVersion: apps/v1
 kind: Deployment

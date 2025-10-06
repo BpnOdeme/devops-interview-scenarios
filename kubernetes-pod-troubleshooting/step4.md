@@ -53,10 +53,10 @@ kubectl describe pod -l app=frontend -n webapp
 
 ```bash
 # Check the ConfigMap file (already prepared in setup)
-cat /root/k8s-app/frontend/nginx-config.yaml
+cat /root/k8s-app/configmaps/nginx-config.yaml
 
 # Apply it
-kubectl apply -f /root/k8s-app/frontend/nginx-config.yaml
+kubectl apply -f /root/k8s-app/configmaps/nginx-config.yaml
 
 # Watch the frontend pod start
 kubectl get pods -n webapp -l app=frontend -w

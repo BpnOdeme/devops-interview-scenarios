@@ -35,10 +35,13 @@ The API deployment references a missing ConfigMap. Let's check the deployment an
 kubectl get deployment api -n webapp -o yaml | grep -A 5 "volumes:"
 
 # Look at the broken deployment file
-cat /root/k8s-app/backend/api-deployment.yaml
+cat /root/k8s-app/deployments/api-deployment.yaml
 
-# Compare with the fixed version
-cat /root/k8s-app/backend/api-deployment-fixed.yaml
+# Compare with the solution version
+cat /root/k8s-app/deployments/api-deployment-SOLUTION.yaml
+
+# Or use diff to see differences
+diff /root/k8s-app/deployments/api-deployment.yaml /root/k8s-app/deployments/api-deployment-SOLUTION.yaml
 ```
 
 **Issues found:**
@@ -49,7 +52,7 @@ cat /root/k8s-app/backend/api-deployment-fixed.yaml
 **Fix Option 1 - Create the ConfigMap:**
 ```bash
 # Create the missing ConfigMap
-kubectl apply -f /root/k8s-app/backend/api-config.yaml
+kubectl apply -f /root/k8s-app/configmaps/api-config.yaml
 
 # Pods should start now
 kubectl get pods -n webapp -l app=api
@@ -68,11 +71,11 @@ kubectl edit deployment api -n webapp
 
 **Fix Option 3 - Apply the corrected deployment:**
 ```bash
-# Apply the fixed deployment
-kubectl apply -f /root/k8s-app/backend/api-deployment-fixed.yaml
+# Apply the solution deployment
+kubectl apply -f /root/k8s-app/deployments/api-deployment-SOLUTION.yaml
 
-# But still need to create the ConfigMap
-kubectl apply -f /root/k8s-app/backend/api-config.yaml
+# Still need to create the ConfigMap
+kubectl apply -f /root/k8s-app/configmaps/api-config.yaml
 
 # Wait for rollout
 kubectl rollout status deployment/api -n webapp
