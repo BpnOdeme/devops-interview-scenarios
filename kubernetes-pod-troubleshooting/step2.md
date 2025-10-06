@@ -228,8 +228,8 @@ After completing this step:
 # Verify services have correct selectors and endpoints
 kubectl get svc,endpoints -n webapp
 
-# Test connectivity between services
-kubectl exec -it <api-pod-name> -n webapp -- wget -qO- http://postgres-service:5432
+# Test DNS resolution from API pod
+kubectl exec -it deployment/api -n webapp -- nslookup postgres-service
 ```
 
 **Next**: Once services can communicate properly, proceed to fix storage and database issues.
