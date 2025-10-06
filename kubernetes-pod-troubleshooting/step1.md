@@ -49,18 +49,19 @@ kubectl logs <pod-name> -n webapp
 
 Based on the pod descriptions and events, identify these common issues:
 
-- **ImagePullBackOff**: Wrong image names or tags
-- **CrashLoopBackOff**: Application errors or missing dependencies
-- **Pending**: Resource constraints or scheduling issues
-- **Init**: Missing configuration files or secrets
+- **ContainerCreating**: Missing ConfigMaps, Secrets, or PersistentVolumeClaims
+- **Pending**: Missing storage resources, scheduling constraints, or image pull issues
+- **ImagePullBackOff**: Wrong image names or tags (check carefully for typos like `postgres:13-wrong`)
+- **CrashLoopBackOff**: Application errors or missing dependencies inside containers
+- **CreateContainerConfigError**: Referenced ConfigMap or Secret doesn't exist
 
 ## Expected Findings
 
 You should discover several issues:
-- Database pod has wrong image tag
-- Backend pod is missing environment variables
-- Frontend pod references non-existent ConfigMap
-- Some pods have insufficient resource limits
+- **Frontend pod**: ContainerCreating state - references non-existent ConfigMap (`nginx-config-missing`)
+- **Postgres pod**: Pending state - wrong image tag (`postgres:13-wrong`) and missing PersistentVolumeClaim
+- **API pods**: May be Running but check logs for application errors (missing package.json, wrong database service name)
+- **Resource limits**: Several pods have insufficient memory allocations
 
 ## Verification
 

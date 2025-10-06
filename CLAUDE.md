@@ -14,7 +14,44 @@
 - Her git commit atmadan önce mutlaka rootdaki CLAUDE.md file güncelle
 - Her commit atıldığında root dizindeki CLAUDE.md file güncelle, md fileları güncelle
 
-## Recent Work - Kubernetes Pod Troubleshooting Scenario (2025-10-03)
+## Recent Work - Kubernetes Pod Troubleshooting Scenario Updates (2025-10-06)
+
+### Updated Step Descriptions to Match Real Cluster State
+
+#### Aligned all step documentation with actual setup script behavior:
+
+1. **Step 1 - Diagnose Pod Failures**:
+   - Updated expected findings to match real initial state
+   - Frontend: ContainerCreating (missing ConfigMap: nginx-config-missing)
+   - Postgres: Pending (wrong image tag: postgres:13-wrong, no PVC)
+   - API: Running but with application errors
+   - Added more specific common issue patterns
+
+2. **Step 2 - Fix Service Communication**:
+   - Corrected service selector fix (app: backend → app: api)
+   - Added commands for creating missing services (frontend-service, postgres-service)
+   - Updated DATABASE_URL fix instructions
+   - Improved verification commands
+
+3. **Step 3 - Resolve Storage and Database Issues**:
+   - Changed from "fix PVC" to "create PVC" (since it doesn't exist initially)
+   - Updated postgres deployment fixes (image, env vars, memory, volume)
+   - Added proper storage class detection commands
+   - Clearer issue identification
+
+4. **Step 4 - Configure Ingress and External Access**:
+   - Updated to create ConfigMap with correct name (nginx-config-missing)
+   - Added ingress controller verification steps
+   - Created frontend service
+   - Simplified ingress creation process
+
+5. **Step 5 - Optimize Resources and Verify Stack**:
+   - Added API application code solution (ConfigMap with Node.js code)
+   - Fixed the npm start issue with actual working code
+   - Updated resource monitoring commands
+   - Improved end-to-end testing procedures
+
+#### Previous Work - Kubernetes Pod Troubleshooting Scenario (2025-10-03)
 
 ### Added New Kubernetes Troubleshooting Case
 

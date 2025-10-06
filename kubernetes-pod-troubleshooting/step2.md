@@ -30,14 +30,41 @@ kubectl describe svc -n webapp
 
 ### 2. Fix Service Selectors
 
-The API service has an incorrect selector. Edit the service:
+The API service has an incorrect selector that doesn't match the pod labels. Let's check and fix it:
 
 ```bash
-kubectl edit svc api-service -n webapp
+# Check current service configuration
+kubectl describe svc api-service -n webapp
+
+# Check what labels the API pods actually have
+kubectl get pods -n webapp -l app=api --show-labels
 ```
 
 **Issue**: The selector is `app: backend` but should be `app: api`
-**Fix**: Change the selector to match the pod labels
+
+**Fix Option 1 - Edit the service directly:**
+```bash
+kubectl edit svc api-service -n webapp
+# Change selector from 'app: backend' to 'app: api'
+```
+
+**Fix Option 2 - Apply corrected YAML:**
+```bash
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+  namespace: webapp
+spec:
+  selector:
+    app: api  # Fixed selector
+  ports:
+  - port: 3000
+    targetPort: 3000
+  type: ClusterIP
+EOF
+```
 
 ### 3. Create Missing Services
 
@@ -61,21 +88,16 @@ spec:
 EOF
 ```
 
-### 4. Fix Database Service Reference
+### 4. Create Database Service
 
-The backend deployment references the wrong database service name. Edit the deployment:
-
-```bash
-kubectl edit deployment api -n webapp
-```
-
-**Issue**: DATABASE_URL points to `postgres-wrong:5432`
-**Fix**: Change it to `postgres-service:5432`
-
-First, create the correct database service:
+The backend deployment references a database service that doesn't exist yet. Let's create it:
 
 ```bash
-cat << 'EOF' | kubectl apply -f -
+# Check if postgres service exists
+kubectl get svc -n webapp | grep postgres
+
+# Create the postgres service
+kubectl apply -f - <<EOF
 apiVersion: v1
 kind: Service
 metadata:
@@ -91,16 +113,38 @@ spec:
 EOF
 ```
 
-### 5. Verify Service Communication
+### 5. Fix Backend Database Connection
 
-Test that services can resolve DNS names correctly:
+The API deployment has the wrong database service name in its environment variables:
 
 ```bash
-# Test DNS resolution from a test pod
-kubectl run test-pod --image=busybox --rm -it --restart=Never -n webapp -- nslookup postgres-service.webapp.svc.cluster.local
+# Check current DATABASE_URL
+kubectl get deployment api -n webapp -o yaml | grep DATABASE_URL
+```
 
+**Issue**: DATABASE_URL points to `postgres-wrong:5432`
+**Fix**: Update it to `postgres-service:5432`
+
+```bash
+kubectl set env deployment/api -n webapp DATABASE_URL="postgresql://user:pass@postgres-service:5432/webapp"
+```
+
+### 6. Verify Service Communication
+
+Test that services can resolve DNS names correctly and have proper endpoints:
+
+```bash
 # Check if services have endpoints
 kubectl get endpoints -n webapp
+
+# Verify API service now has endpoints
+kubectl describe svc api-service -n webapp
+
+# Test DNS resolution from a running pod
+kubectl exec -it deployment/redis -n webapp -- nslookup api-service.webapp.svc.cluster.local
+
+# Verify postgres service (once pod is running)
+kubectl get endpoints postgres-service -n webapp
 ```
 
 ## Expected Results

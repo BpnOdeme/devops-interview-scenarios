@@ -6,34 +6,31 @@ In this step, you'll fix the persistent storage issues and get the database runn
 
 ## Current Problems
 
-- PersistentVolumeClaim references non-existent storage class
-- Database deployment has wrong image tag
-- Missing environment variables for database initialization
-- Insufficient memory limits for database operation
+Based on the setup, the PostgreSQL pod is in **Pending** state due to:
+- Database deployment has wrong image tag (`postgres:13-wrong` instead of `postgres:13`)
+- Missing PersistentVolumeClaim (no PVC defined in manifests)
+- Missing critical environment variables (POSTGRES_USER, POSTGRES_PASSWORD)
+- Insufficient memory limits for database operation (64Mi is too low)
 
 ## Tasks
 
-### 1. Fix Persistent Volume Claim
+### 1. Create Persistent Volume Claim
 
-The current PVC references a non-existent storage class. Check available storage classes:
+The PostgreSQL deployment needs persistent storage, but no PVC exists. Let's create one:
 
 ```bash
 # Check available storage classes
 kubectl get storageclass
 
-# Check the current PVC status
+# Check current PVC status (should be empty)
 kubectl get pvc -n webapp
-kubectl describe pvc postgres-pvc -n webapp
 ```
 
-Fix the PVC by using the correct storage class:
+Create a new PVC for PostgreSQL:
 
 ```bash
-# Delete the broken PVC first
-kubectl delete pvc postgres-pvc -n webapp
-
-# Create new PVC with correct storage class
-cat << 'EOF' | kubectl apply -f -
+# Create PVC with available storage class
+kubectl apply -f - <<EOF
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -42,31 +39,35 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: standard  # Use available storage class
+  storageClassName: standard  # Use 'standard' or available storage class from kubectl get sc
   resources:
     requests:
       storage: 1Gi
 EOF
+
+# Verify PVC is created and bound
+kubectl get pvc -n webapp
 ```
 
 ### 2. Fix Database Deployment
 
-The PostgreSQL deployment has several issues. Let's fix them:
+The PostgreSQL deployment has several critical issues. Let's fix them all:
 
 ```bash
-kubectl edit deployment postgres -n webapp
+# First, check the current deployment
+kubectl get deployment postgres -n webapp -o yaml
 ```
 
-**Issues to fix:**
-1. **Wrong image**: Change `postgres:13-wrong` to `postgres:13`
-2. **Missing environment variables**: Add required PostgreSQL env vars
-3. **Insufficient memory**: Increase memory limits
-4. **Wrong PVC reference**: Update volume claim name
+**Issues identified:**
+1. **Wrong image**: `postgres:13-wrong` should be `postgres:13`
+2. **Missing environment variables**: No POSTGRES_USER and POSTGRES_PASSWORD
+3. **Insufficient memory**: 64Mi is too low for PostgreSQL
+4. **Missing volume**: No PVC is mounted
 
 Apply the corrected deployment:
 
 ```bash
-cat << 'EOF' | kubectl apply -f -
+kubectl apply -f - <<EOF
 apiVersion: apps/v1
 kind: Deployment
 metadata:

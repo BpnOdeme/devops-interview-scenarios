@@ -6,39 +6,49 @@ In this step, you'll fix the ingress configuration to enable external access to 
 
 ## Current Problems
 
-- Ingress references non-existent services
-- Frontend deployment is missing required ConfigMap
-- No proper routing configuration
-- Ingress controller may not be properly configured
+Based on the current setup:
+- Frontend deployment is **ContainerCreating** - references non-existent ConfigMap (`nginx-config-missing`)
+- Frontend service doesn't exist yet
+- No ingress configuration has been created
+- Ingress controller should be enabled via minikube addons
 
 ## Tasks
 
-### 1. Check Ingress Status
+### 1. Check Ingress Controller Status
 
-First, examine the current ingress configuration:
+First, verify the ingress controller is running:
 
 ```bash
-# Check ingress status
-kubectl get ingress -n webapp
-kubectl describe ingress webapp-ingress -n webapp
+# Check if ingress addon is enabled (for minikube)
+minikube addons list | grep ingress
 
-# Check ingress controller
+# Check ingress controller pods
 kubectl get pods -n ingress-nginx
-# or for minikube
-kubectl get pods -n kube-system | grep ingress
+
+# If not enabled, enable it
+minikube addons enable ingress
+
+# Wait for ingress controller to be ready
+kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=120s
 ```
 
 ### 2. Create Missing ConfigMap for Frontend
 
-The frontend pod references a non-existent ConfigMap. Create it:
+The frontend pod is stuck in ContainerCreating because it references `nginx-config-missing`. Let's create the correct ConfigMap:
 
 ```bash
-# Create nginx configuration for frontend
-cat << 'EOF' | kubectl apply -f -
+# Check what ConfigMap the frontend deployment is looking for
+kubectl describe deployment frontend -n webapp | grep -A 5 "Volumes:"
+
+# Create the nginx-config ConfigMap
+kubectl apply -f - <<EOF
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: nginx-config
+  name: nginx-config-missing  # Must match the deployment reference
   namespace: webapp
 data:
   default.conf: |
@@ -68,82 +78,51 @@ data:
 EOF
 ```
 
-### 3. Create Basic Frontend Content
+### 3. Verify Frontend Pod Status
 
-Add some basic HTML content for testing:
+After creating the ConfigMap, check if the frontend pod starts:
 
 ```bash
-# Create a simple index.html
-cat << 'EOF' | kubectl create configmap frontend-content --from-literal=index.html='
-<!DOCTYPE html>
-<html>
-<head>
-    <title>WebApp</title>
-</head>
-<body>
-    <h1>Welcome to WebApp</h1>
-    <p>Frontend is working!</p>
-    <p><a href="/api/health">Check API Health</a></p>
-</body>
-</html>
-' -n webapp
-EOF
+# Watch the frontend pod status
+kubectl get pods -n webapp -w
+
+# Once running, check pod logs
+kubectl logs deployment/frontend -n webapp
+
+# Verify the ConfigMap was created
+kubectl get configmap nginx-config-missing -n webapp
 ```
 
-### 4. Update Frontend Deployment
+### 4. Create Frontend Service
 
-Fix the frontend deployment to use the correct ConfigMaps:
+The frontend needs a service for ingress to route traffic to it:
 
 ```bash
-cat << 'EOF' | kubectl apply -f -
-apiVersion: apps/v1
-kind: Deployment
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Service
 metadata:
-  name: frontend
+  name: frontend-service
   namespace: webapp
 spec:
-  replicas: 1
   selector:
-    matchLabels:
-      app: frontend
-  template:
-    metadata:
-      labels:
-        app: frontend
-    spec:
-      containers:
-      - name: frontend
-        image: nginx:1.21
-        ports:
-        - containerPort: 80
-        volumeMounts:
-        - name: nginx-config
-          mountPath: /etc/nginx/conf.d
-        - name: frontend-content
-          mountPath: /usr/share/nginx/html
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "100m"
-          limits:
-            memory: "128Mi"
-            cpu: "200m"
-      volumes:
-      - name: nginx-config
-        configMap:
-          name: nginx-config
-      - name: frontend-content
-        configMap:
-          name: frontend-content
+    app: frontend
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
 EOF
+
+# Verify service and endpoints
+kubectl get svc,endpoints -n webapp | grep frontend
 ```
 
-### 5. Fix Ingress Configuration
+### 5. Create Ingress Configuration
 
-Update the ingress to reference correct services:
+Now create an ingress to expose the application externally:
 
 ```bash
-cat << 'EOF' | kubectl apply -f -
+kubectl apply -f - <<EOF
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

@@ -6,41 +6,75 @@ In this final step, you'll optimize resource allocations, fix any remaining issu
 
 ## Current Problems
 
-- Backend API deployment still has issues with application startup
-- Resource limits may be too restrictive
-- Need to verify complete application functionality
-- Missing health checks and monitoring
+At this stage, you should have:
+- ✅ Frontend pod running (ConfigMap created)
+- ✅ PostgreSQL pod running (image fixed, PVC created, env vars added)
+- ✅ Redis pod running (was already working)
+- ⚠️ API pods may need resource optimization and proper application code
+- ⚠️ Need to verify end-to-end functionality
 
 ## Tasks
 
-### 1. Fix Backend API Configuration
+### 1. Verify Current Status
 
-The backend API pod needs proper port configuration and resource allocation:
-
-Fix the API deployment configuration:
+First, check the status of all components:
 
 ```bash
-# Edit the API deployment
-kubectl edit deployment api -n webapp
+# Check all pods
+kubectl get pods -n webapp
 
-# Fix these issues:
-# 1. Change containerPort from 80 to 3000
-# 2. Increase memory limits (128Mi minimum)
-# 3. Fix service references in environment variables
+# Check all services
+kubectl get svc -n webapp
+
+# Check all endpoints
+kubectl get endpoints -n webapp
+
+# Check ingress
+kubectl get ingress -n webapp
 ```
 
-### 2. Alternative: Use File-Based Editing
+### 2. Check API Pod Logs
 
-Edit the deployment file directly:
+The API pods might be running but could have application errors:
 
 ```bash
-# Navigate to deployments directory
-cd /root/k8s-app/deployments
+# Check API pod logs
+kubectl logs deployment/api -n webapp
 
-# Edit API deployment file
-vim api-deployment.yaml
+# You should see errors about missing package.json or npm start failure
+```
 
-# Update the following:
+### 3. Fix Backend API Application Issue
+
+The API deployment is trying to run `npm start` but there's no package.json. Let's create a simple working API:
+
+```bash
+# Create a ConfigMap with a simple Node.js application
+kubectl create configmap api-code --from-literal=index.js='
+const http = require("http");
+const port = 3000;
+
+const server = http.createServer((req, res) => {
+  if (req.url === "/health") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ status: "healthy", timestamp: new Date() }));
+  } else {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({
+      message: "WebApp API",
+      version: "1.0.0",
+      endpoints: ["/health", "/"]
+    }));
+  }
+});
+
+server.listen(port, () => {
+  console.log(`API server running on port ${port}`);
+});
+' -n webapp
+
+# Update API deployment to use this code
+kubectl apply -f - <<EOF
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -56,21 +90,11 @@ spec:
       labels:
         app: api
     spec:
-      initContainers:
-      - name: install-deps
-        image: node:16-alpine
-        command: ["/bin/sh"]
-        args: ["-c", "cd /app && npm install"]
-        volumeMounts:
-        - name: api-code
-          mountPath: /app
-        - name: node-modules
-          mountPath: /app/node_modules
       containers:
       - name: api
         image: node:16-alpine
-        command: ["/bin/sh"]
-        args: ["-c", "cd /app && npm start"]
+        command: ["/bin/sh", "-c"]
+        args: ["node /app/index.js"]
         ports:
         - containerPort: 3000
         env:
@@ -78,25 +102,21 @@ spec:
           value: "postgresql://webapp_user:webapp_password@postgres-service:5432/webapp"
         - name: REDIS_URL
           value: "redis://redis-cache:6379"
-        - name: NODE_ENV
-          value: "production"
         resources:
           requests:
             memory: "128Mi"
             cpu: "100m"
           limits:
             memory: "256Mi"
-            cpu: "500m"
+            cpu: "200m"
         volumeMounts:
         - name: api-code
           mountPath: /app
-        - name: node-modules
-          mountPath: /app/node_modules
         livenessProbe:
           httpGet:
             path: /health
             port: 3000
-          initialDelaySeconds: 30
+          initialDelaySeconds: 10
           periodSeconds: 10
         readinessProbe:
           httpGet:
@@ -108,12 +128,10 @@ spec:
       - name: api-code
         configMap:
           name: api-code
-      - name: node-modules
-        emptyDir: {}
 EOF
 ```
 
-### 3. Monitor Resource Usage
+### 4. Monitor Resource Usage
 
 Check if pods have sufficient resources:
 
@@ -131,22 +149,7 @@ kubectl describe pods -n webapp | grep -A 5 -B 5 "Requests\|Limits"
 kubectl get events -n webapp --field-selector reason=FailedScheduling
 ```
 
-### 4. Add Horizontal Pod Autoscaler (Optional)
-
-For production readiness, add autoscaling:
-
-```bash
-# Enable metrics server (if not already enabled)
-minikube addons enable metrics-server
-
-# Create HPA for API
-kubectl autoscale deployment api --cpu-percent=70 --min=2 --max=5 -n webapp
-
-# Check HPA status
-kubectl get hpa -n webapp
-```
-
-### 5. Comprehensive Testing
+### 5. Test Complete Application Stack
 
 Perform end-to-end testing of the complete application:
 
@@ -170,7 +173,7 @@ kubectl exec -it deployment/api -n webapp -- wget -qO- http://postgres-service:5
 kubectl exec -it deployment/api -n webapp -- wget -qO- http://redis-cache:6379 || echo "Redis connection test"
 ```
 
-### 6. Check Application Logs
+### 6. Verify Pod Health and Logs
 
 Verify all services are working properly:
 
@@ -185,7 +188,7 @@ kubectl logs deployment/redis -n webapp
 kubectl get events -n webapp --sort-by='.lastTimestamp' | tail -20
 ```
 
-### 7. Performance and Health Verification
+### 7. Final Health Check
 
 ```bash
 # Check pod readiness and liveness
