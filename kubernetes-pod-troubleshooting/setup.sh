@@ -258,14 +258,12 @@ echo "📝 Creating solution ConfigMaps..."
 
 cat > /root/k8s-app/configmaps/api-config.yaml << 'EOF'
 # Solution: API ConfigMap with nginx configuration
-# To fix API pods, you need to:
-# 1. Create this ConfigMap: kubectl apply -f /root/k8s-app/configmaps/api-config.yaml
-# 2. Update API deployment to reference 'api-config' instead of 'api-config-missing'
-#    OR apply the fixed deployment: kubectl apply -f /root/k8s-app/deployments/api-deployment-SOLUTION.yaml
+# Apply this to fix API pods: kubectl apply -f /root/k8s-app/configmaps/api-config.yaml
+# This will create the missing ConfigMap that the API deployment needs
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: api-config
+  name: api-config-missing
   namespace: webapp
 data:
   default.conf: |
@@ -411,7 +409,7 @@ spec:
       volumes:
       - name: api-config
         configMap:
-          name: api-config
+          name: api-config-missing
 EOF
 
 # Apply all broken manifests

@@ -45,41 +45,31 @@ diff /root/k8s-app/deployments/api-deployment.yaml /root/k8s-app/deployments/api
 ```
 
 **Issues found:**
-1. ConfigMap name is wrong: `api-config-missing` → should be `api-config`
+1. ConfigMap `api-config-missing` doesn't exist
 2. Container port is wrong: `80` → should be `3000`
 3. Resources too low: need more memory
+4. Image should be nginx:alpine (not nginx:1.21)
 
-**Fix Option 1 - Create the ConfigMap:**
+**Fix Option 1 - Create the missing ConfigMap (simplest):**
 ```bash
-# Create the missing ConfigMap
+# Create the missing ConfigMap - this will make pods start
 kubectl apply -f /root/k8s-app/configmaps/api-config.yaml
 
-# Pods should start now
-kubectl get pods -n webapp -l app=api
+# Verify pods are starting
+kubectl get pods -n webapp -l app=api -w
 ```
 
-**Fix Option 2 - Edit the deployment directly:**
+**Fix Option 2 - Apply the complete solution:**
 ```bash
-# Edit the deployment
-kubectl edit deployment api -n webapp
-
-# Change:
-# - configMap name from 'api-config-missing' to 'api-config'
-# - containerPort from 80 to 3000
-# - memory requests/limits to 128Mi/256Mi
-```
-
-**Fix Option 3 - Apply the corrected deployment:**
-```bash
-# Apply the solution deployment
+# Apply both ConfigMap and fixed deployment
+kubectl apply -f /root/k8s-app/configmaps/api-config.yaml
 kubectl apply -f /root/k8s-app/deployments/api-deployment-SOLUTION.yaml
-
-# Still need to create the ConfigMap
-kubectl apply -f /root/k8s-app/configmaps/api-config.yaml
 
 # Wait for rollout
 kubectl rollout status deployment/api -n webapp
 ```
+
+**Note:** Option 1 is enough to get pods running for Step 2. The deployment still has wrong port (80 instead of 3000) and old image, but pods will be Running and Ready, which is what Step 2 requires.
 
 ### 2. Check Service Configuration
 

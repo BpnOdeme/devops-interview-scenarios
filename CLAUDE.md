@@ -14,7 +14,42 @@
 - Her git commit atmadan önce mutlaka rootdaki CLAUDE.md file güncelle
 - Her commit atıldığında root dizindeki CLAUDE.md file güncelle, md fileları güncelle
 
-## Recent Work - Killercoda Compatibility Fixes (2025-10-06)
+## Recent Work - Step 2 Validation Fix (2025-10-07)
+
+### Fixed ConfigMap Name Mismatch Causing Step 2 Validation Failure
+
+**Problem Identified:**
+- API broken deployment was looking for `api-config-missing` ConfigMap
+- Solution ConfigMap was creating `api-config` (different name!)
+- This mismatch meant pods couldn't start even after applying solution
+- Step 2 verification requires 2 Running API pods - impossible with wrong ConfigMap name
+
+**Root Cause:**
+Initially tried to be clever with two-step fix (create ConfigMap + edit deployment), but this created confusion and made Step 2 impossible to pass.
+
+**Solution Applied:**
+1. **Unified ConfigMap naming**: api-config.yaml now creates `api-config-missing` (matches what deployment expects)
+2. **Updated SOLUTION deployment**: Also references `api-config-missing` for consistency
+3. **Single-step fix**: User just needs `kubectl apply -f api-config.yaml` to make pods run
+4. **Updated step2.md**: Clarified that Option 1 (just ConfigMap) is sufficient for Step 2
+
+**Step 2 Verification Requirements:**
+- ✅ 2 API pods Running
+- ✅ 2 API pods Ready
+- ✅ 4 services exist: api-service, frontend-service, postgres-service, redis-cache
+- ✅ All services have endpoints
+- ✅ api-service selector is `app: api`
+
+**Files Changed:**
+- setup.sh: ConfigMap name `api-config` → `api-config-missing` (line 266)
+- setup.sh: SOLUTION deployment ConfigMap ref updated (line 412)
+- step2.md: Updated instructions to reflect single-step fix approach
+
+This matches the frontend approach where `nginx-config-missing` ConfigMap is created directly with the name the deployment expects.
+
+---
+
+## Previous Work - Killercoda Compatibility Fixes (2025-10-06)
 
 ### Fixed Container Command Compatibility and Verification Scripts
 
