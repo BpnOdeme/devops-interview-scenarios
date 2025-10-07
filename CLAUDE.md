@@ -14,7 +14,38 @@
 - Her git commit atmadan önce mutlaka rootdaki CLAUDE.md file güncelle
 - Her commit atıldığında root dizindeki CLAUDE.md file güncelle, md fileları güncelle
 
-## Recent Work - Step 2 Validation Strategy Clarification (2025-10-07)
+## Recent Work - Simplified API to Mock Service (2025-10-07)
+
+### Removed Confusing Database/Redis References from API
+
+**Problem:**
+- API deployment used nginx image but had DATABASE_URL and REDIS_URL env vars
+- This was confusing - nginx can't connect to databases
+- Created false expectation that this was a real backend application
+- Distracted from core learning objective: Kubernetes troubleshooting
+
+**Solution:**
+- Removed DATABASE_URL and REDIS_URL environment variables
+- Clarified API is a **mock service** using nginx to return JSON responses
+- Added clear notes in step2.md and README.md
+- Removed "Fix Backend Database Connection" section from step2.md
+
+**Why This Matters:**
+- **Focus**: This is a Kubernetes/DevOps troubleshooting scenario, not app development
+- **Clarity**: Mock API with nginx is simple and fits the educational goal
+- **Realistic**: In real DevOps work, you troubleshoot infrastructure regardless of app complexity
+- **Simpler**: Less cognitive load, more focus on K8s resources
+
+**API Mock Service:**
+- Uses nginx with ConfigMap for JSON responses
+- `/health` endpoint returns `{"status":"healthy"}`
+- `/` endpoint returns `{"message":"API is running"}`
+- No actual database connections needed
+- Perfect for testing service mesh, ingress, and pod networking
+
+---
+
+## Previous Work - Step 2 Validation Strategy Clarification (2025-10-07)
 
 ### Confirmed Correct Approach: Solution ConfigMaps Use "-missing" Suffix
 

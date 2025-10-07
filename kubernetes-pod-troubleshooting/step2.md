@@ -48,7 +48,9 @@ diff /root/k8s-app/deployments/api-deployment.yaml /root/k8s-app/deployments/api
 1. ConfigMap `api-config-missing` doesn't exist
 2. Container port is wrong: `80` → should be `3000`
 3. Resources too low: need more memory
-4. Image should be nginx:alpine (not nginx:1.21)
+4. Image is old version: should be nginx:alpine (not nginx:1.21)
+
+**Note:** This is a mock API using nginx to return JSON responses. It doesn't connect to actual databases - the focus is on Kubernetes troubleshooting, not application development.
 
 **Fix Option 1 - Create the missing ConfigMap (simplest):**
 ```bash
@@ -171,23 +173,7 @@ spec:
 EOF
 ```
 
-### 6. Fix Backend Database Connection
-
-The API deployment has the wrong database service name in its environment variables:
-
-```bash
-# Check current DATABASE_URL
-kubectl get deployment api -n webapp -o yaml | grep DATABASE_URL
-```
-
-**Issue**: DATABASE_URL points to `postgres-wrong:5432`
-**Fix**: Update it to `postgres-service:5432`
-
-```bash
-kubectl set env deployment/api -n webapp DATABASE_URL="postgresql://user:pass@postgres-service:5432/webapp"
-```
-
-### 7. Verify Service Communication
+### 6. Verify Service Communication
 
 Test that services can resolve DNS names correctly and have proper endpoints:
 

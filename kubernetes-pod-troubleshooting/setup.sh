@@ -83,14 +83,9 @@ spec:
     spec:
       containers:
       - name: api
-        image: nginx:1.21
+        image: nginx:1.21  # BROKEN: Old version, should be nginx:alpine
         ports:
         - containerPort: 80  # BROKEN: Wrong port (should be 3000 for API)
-        env:
-        - name: DATABASE_URL
-          value: "postgresql://user:pass@postgres-wrong:5432/webapp"  # BROKEN: Wrong service name
-        - name: REDIS_URL
-          value: "redis://redis-cache:6379"
         volumeMounts:
         - name: api-config
           mountPath: /etc/nginx/conf.d
@@ -534,12 +529,16 @@ Use `*-SOLUTION.yaml` files for reference:
 - `diff storage/postgres-pvc{,-SOLUTION}.yaml`
 
 ## Known Issues to Fix
-1. **PostgreSQL**: Wrong image tag, missing env vars, low resources
-2. **API**: Wrong container port, low resource limits, wrong service references
+1. **PostgreSQL**: Wrong image tag, missing env vars, low resources, missing PVC
+2. **API**: Missing ConfigMap, wrong container port, low resource limits, old image
 3. **Frontend**: Missing ConfigMap references
-4. **Services**: Wrong selectors
+4. **Services**: Wrong selectors, missing services
 5. **Storage**: Non-existent storage classes
 6. **Ingress**: Wrong service references
+
+## Note About API
+The API is a mock service using nginx to return JSON responses (not a real backend app).
+This keeps the focus on Kubernetes troubleshooting rather than application development.
 
 ## Troubleshooting Commands
 ```bash
