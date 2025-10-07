@@ -2,13 +2,15 @@
 
 ## Scenario Overview
 
-You've been called to fix a critical Kubernetes cluster where multiple pods are failing and the application is not accessible. The development team deployed a web application with the following components:
+You've been called to fix a critical Kubernetes cluster where multiple pods are failing and the application is not accessible. The operations team deployed a web application with the following components:
 
-- **Frontend**: React application served by Nginx
-- **Backend API**: Node.js REST API with database connectivity
+- **Frontend**: Static web application served by Nginx
+- **Backend API**: Mock REST API (nginx) returning JSON responses
 - **Database**: PostgreSQL with persistent storage
-- **Cache**: Redis for session management
+- **Cache**: Redis for data caching
 - **Ingress**: Nginx Ingress Controller for external access
+
+**Note**: The API is a mock service for this troubleshooting exercise - the focus is on Kubernetes infrastructure, not application development.
 
 ## The Problem
 
@@ -33,22 +35,20 @@ The operations team reports multiple issues:
 ## Available Tools
 
 - `kubectl` - Kubernetes command-line tool
-- `docker` - Container management (for debugging)
 - `curl` - Test HTTP endpoints
 - `dig/nslookup` - DNS troubleshooting
 - `nano/vim` - Edit configuration files
-- `k9s` - Terminal UI for Kubernetes (if available)
 
 ## Key Kubernetes Objects
 
-- `/root/k8s-app/namespace.yaml` - Application namespace
-- `/root/k8s-app/frontend/` - Frontend deployment and service
-- `/root/k8s-app/backend/` - Backend API deployment and service
-- `/root/k8s-app/database/` - PostgreSQL deployment, service, and PVC
-- `/root/k8s-app/redis/` - Redis cache deployment and service
-- `/root/k8s-app/ingress/` - Ingress controller and rules
-- `/root/k8s-app/configmaps/` - Application configuration
-- `/root/k8s-app/secrets/` - Database credentials and certificates
+All configuration files are in `/root/k8s-app/` directory:
+
+- `deployments/` - Pod deployment configurations (api, frontend, postgres, redis)
+- `services/` - Service definitions for internal communication
+- `storage/` - PersistentVolumeClaim for database
+- `configmaps/` - Configuration for nginx (API and frontend)
+- `ingress/` - Ingress rules for external access
+- `README.md` - Lab documentation and hints
 
 ## Common Kubernetes Commands
 
@@ -75,26 +75,23 @@ kubectl get ingress -A
 # View persistent volumes
 kubectl get pv,pvc -A
 
-# Check resource usage
-kubectl top nodes
-kubectl top pods -A
 ```
 
 ## Success Criteria
 
-- All pods are in Running state
-- Services can communicate internally
-- Database and Redis are accessible
-- Frontend is accessible via Ingress
-- No resource constraint issues
-- Application functions end-to-end
-- Logs show no error messages
+- ✅ All pods are in Running state (1/1 or 2/2 Ready)
+- ✅ Services have valid endpoints
+- ✅ API service selector matches pod labels
+- ✅ PostgreSQL pod is running with correct image and env vars
+- ✅ PersistentVolumeClaim is bound
+- ✅ Frontend and API ConfigMaps exist
+- ✅ Pod logs show successful startup (no errors)
+- ✅ Database connections work (test with pg_isready)
+- ✅ Redis is accessible (test with redis-cli ping)
 
 ## Cluster Access
 
 The Kubernetes cluster is already running with:
-- **Cluster**: Minikube/Kind cluster
 - **Context**: `kubectl config current-context`
-- **Dashboard**: `minikube dashboard` (if using Minikube)
 
 Click **START** to begin troubleshooting!

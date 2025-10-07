@@ -81,22 +81,108 @@ kubectl exec -it deployment/redis -n webapp -- redis-cli ping
 # Note: API is a mock service (nginx), it doesn't actually connect to postgres or redis
 ```
 
-### 4. Verify Pod Health and Logs
+### 4. Analyze Pod Logs for Troubleshooting
 
-Verify all services are working properly:
+**Important DevOps Skill**: Always check logs to verify applications are working correctly!
 
+#### Check API Pod Logs:
 ```bash
-# Check all pod logs
-kubectl logs deployment/frontend -n webapp
+# View API logs - look for startup messages
 kubectl logs deployment/api -n webapp
-kubectl logs deployment/postgres -n webapp
-kubectl logs deployment/redis -n webapp
 
-# Check for any error events
-kubectl get events -n webapp --sort-by='.lastTimestamp' | tail -20
+# Expected healthy logs:
+# - nginx startup messages
+# - Port 3000 listening
+# - No error messages
+
+# If you see errors, investigate:
+kubectl logs deployment/api -n webapp --previous  # Check previous container
+kubectl logs deployment/api -n webapp --tail=50   # Last 50 lines
 ```
 
-### 5. Final Health Check
+#### Check PostgreSQL Logs:
+```bash
+# View postgres logs
+kubectl logs deployment/postgres -n webapp
+
+# Look for:
+# ✅ "database system is ready to accept connections"
+# ✅ No authentication errors
+# ❌ "FATAL: password authentication failed" (means env vars wrong)
+# ❌ "out of memory" (means resource limits too low)
+
+# Test database connection
+kubectl exec -it deployment/postgres -n webapp -- pg_isready -U webapp_user
+# Expected: "accepting connections"
+```
+
+#### Check Redis Logs:
+```bash
+# View redis logs
+kubectl logs deployment/redis -n webapp
+
+# Look for:
+# ✅ "Ready to accept connections"
+# ✅ No memory errors
+# ❌ "OOM" or "out of memory" (increase resources)
+
+# Test Redis connection
+kubectl exec -it deployment/redis -n webapp -- redis-cli ping
+# Expected: "PONG"
+```
+
+#### Check Frontend Logs:
+```bash
+# View frontend logs
+kubectl logs deployment/frontend -n webapp
+
+# Look for nginx startup:
+# ✅ "start worker process"
+# ❌ Configuration errors
+
+# Check nginx config is loaded
+kubectl exec -it deployment/frontend -n webapp -- nginx -t
+# Expected: "syntax is ok"
+```
+
+#### Check for Error Events:
+```bash
+# Get recent events (sorted by time)
+kubectl get events -n webapp --sort-by='.lastTimestamp' | tail -20
+
+# Look for:
+# ❌ "Failed to pull image"
+# ❌ "CrashLoopBackOff"
+# ❌ "OOMKilled"
+# ❌ "FailedScheduling"
+```
+
+### 5. Verify Database and Cache Connectivity
+
+Test that database and cache are accessible:
+
+```bash
+# PostgreSQL connectivity test
+echo "Testing PostgreSQL connection..."
+kubectl exec -it deployment/postgres -n webapp -- psql -U webapp_user -d webapp -c "SELECT version();"
+
+# Expected: PostgreSQL version info
+# If error: Check POSTGRES_USER and POSTGRES_PASSWORD env vars
+
+# Redis connectivity test
+echo "Testing Redis connection..."
+kubectl exec -it deployment/redis -n webapp -- redis-cli ping
+
+# Expected: PONG
+# If error: Check redis pod is Running
+
+# Test Redis set/get
+kubectl exec -it deployment/redis -n webapp -- redis-cli SET test "hello"
+kubectl exec -it deployment/redis -n webapp -- redis-cli GET test
+# Expected: "hello"
+```
+
+### 6. Final Health Check
 
 ```bash
 # Check pod readiness and liveness

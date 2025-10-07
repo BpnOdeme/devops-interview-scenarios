@@ -14,7 +14,65 @@
 - Her git commit atmadan önce mutlaka rootdaki CLAUDE.md file güncelle
 - Her commit atıldığında root dizindeki CLAUDE.md file güncelle, md fileları güncelle
 
-## Recent Work - Fixed API Ready Count Bug in Verify Script (2025-10-07)
+## Recent Work - Enhanced Lab with Log Analysis and Real Node.js API (2025-10-07)
+
+### Added DevOps Skills: Log Analysis and Application Troubleshooting
+
+**Changes Made:**
+
+#### 1. Created Real Node.js API Application (api-app/):
+- **server.js**: Express API with PostgreSQL and Redis connectivity
+- **package.json**: Dependencies (express, pg, redis)
+- **Dockerfile**: Container image definition
+- Endpoints: `/health`, `/`, `/users`, `/cache/test`
+- Ready for future use when we want real DB/Redis testing
+
+**Note**: Currently using nginx mock API for simplicity, but real Node.js app is prepared.
+
+#### 2. Updated intro.md:
+- Corrected component descriptions (was saying "Node.js API", now says "Mock API")
+- Fixed directory structure (removed wrong paths like `/root/k8s-app/frontend/`)
+- Updated to match actual folder structure (deployments/, services/, storage/, configmaps/)
+- Added success criteria with specific checks
+- Clarified focus on Kubernetes infrastructure, not app development
+
+#### 3. Enhanced Step 5 with Log Analysis:
+Added comprehensive DevOps troubleshooting section:
+
+**Section 4: Analyze Pod Logs**
+- How to check API logs for startup issues
+- How to check PostgreSQL logs for connection errors
+- How to check Redis logs for memory issues
+- How to check Frontend logs for nginx config
+- How to find error events with kubectl
+
+**Section 5: Verify Database and Cache Connectivity**
+- PostgreSQL connection test with psql
+- Redis ping test
+- Redis SET/GET test
+- Clear expected outputs and error meanings
+
+**Why This Matters:**
+- DevOps engineers MUST check logs to verify applications
+- Teaches systematic troubleshooting approach
+- Shows how to identify common issues (OOM, authentication failures, config errors)
+- Real-world skill: reading logs is critical for production support
+
+**Examples Added:**
+```bash
+# PostgreSQL logs - what to look for:
+✅ "database system is ready to accept connections"
+❌ "FATAL: password authentication failed"
+❌ "out of memory"
+
+# Redis logs - what to look for:
+✅ "Ready to accept connections"
+❌ "OOM" or "out of memory"
+```
+
+---
+
+## Previous Work - Fixed API Ready Count Bug in Verify Script (2025-10-07)
 
 ### Corrected grep Pattern to Count Multiple "true" Values
 
