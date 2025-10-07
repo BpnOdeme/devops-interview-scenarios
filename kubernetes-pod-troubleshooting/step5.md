@@ -68,15 +68,17 @@ curl -H "Host: webapp.local" http://$(minikube ip)/api/health
 # Test API endpoints
 curl -H "Host: webapp.local" http://$(minikube ip)/api/users
 
-# Test DNS resolution from API pod (using getent - works in alpine)
-kubectl exec -it deployment/api -n webapp -- getent hosts postgres-service
-kubectl exec -it deployment/api -n webapp -- getent hosts redis-cache
+# Test DNS resolution from Redis pod (using getent - works in alpine)
+kubectl exec -it deployment/redis -n webapp -- getent hosts api-service
+kubectl exec -it deployment/redis -n webapp -- getent hosts frontend-service
 
 # Test actual database connection (from postgres pod)
 kubectl exec -it deployment/postgres -n webapp -- pg_isready -U webapp_user
 
 # Test Redis connection (from redis pod)
 kubectl exec -it deployment/redis -n webapp -- redis-cli ping
+
+# Note: API is a mock service (nginx), it doesn't actually connect to postgres or redis
 ```
 
 ### 4. Verify Pod Health and Logs

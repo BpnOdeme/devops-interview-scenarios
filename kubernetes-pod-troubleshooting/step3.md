@@ -144,19 +144,6 @@ kubectl exec -it deployment/postgres -n webapp -- psql -U webapp_user -d webapp 
 kubectl exec -it deployment/postgres -n webapp -- pg_isready -U webapp_user -d webapp
 ```
 
-### 5. Update Backend Configuration
-
-Now update the backend deployment to use correct database credentials:
-
-```bash
-kubectl edit deployment api -n webapp
-```
-
-Update the DATABASE_URL environment variable:
-```
-DATABASE_URL: "postgresql://webapp_user:webapp_password@postgres-service:5432/webapp"
-```
-
 ## Expected Results
 
 After completing this step:
