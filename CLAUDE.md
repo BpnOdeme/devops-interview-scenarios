@@ -14,7 +14,45 @@
 - Her git commit atmadan önce mutlaka rootdaki CLAUDE.md file güncelle
 - Her commit atıldığında root dizindeki CLAUDE.md file güncelle, md fileları güncelle
 
-## Recent Work - Simplified API to Mock Service (2025-10-07)
+## Recent Work - Fixed Verify Script Location for Killercoda (2025-10-07)
+
+### Created verify-step2.sh in /root Directory During Setup
+
+**Problem:**
+- Verify scripts in git repo (verify-step2.sh) were not visible in Killercoda
+- Killercoda doesn't automatically copy scripts from subdirectories to /root
+- User ran `find . -name "verify-step2.sh"` in /root - nothing found
+- "Check" button in Killercoda couldn't find the script
+
+**Root Cause:**
+- Files in `kubernetes-pod-troubleshooting/` subdirectory
+- Killercoda needs verify scripts in `/root` directory (scenario root)
+- Only files in scenario root are accessible to verify mechanism
+
+**Solution:**
+- Added code to setup.sh to create `/root/verify-step2.sh` at line 498-569
+- Script is generated inline during setup (same content as inline verify in /usr/local/bin)
+- Now Killercoda's "Check" button can find and execute the script
+- Made executable with `chmod +x /root/verify-step2.sh`
+
+**Implementation:**
+```bash
+# In setup.sh
+cat > /root/verify-step2.sh << 'VERIFY_ROOT_EOF'
+#!/bin/bash
+# Full verification logic here
+VERIFY_ROOT_EOF
+chmod +x /root/verify-step2.sh
+```
+
+**Result:**
+- Verify script now exists in `/root/verify-step2.sh` (Killercoda scenario root)
+- Also exists in `/usr/local/bin/verify-step2` (for manual testing)
+- Both versions have identical logic
+
+---
+
+## Previous Work - Simplified API to Mock Service (2025-10-07)
 
 ### Removed Confusing Database/Redis References from API
 
