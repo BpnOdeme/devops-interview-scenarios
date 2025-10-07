@@ -91,6 +91,9 @@ spec:
           value: "postgresql://user:pass@postgres-wrong:5432/webapp"  # BROKEN: Wrong service name
         - name: REDIS_URL
           value: "redis://redis-cache:6379"
+        volumeMounts:
+        - name: api-config
+          mountPath: /etc/nginx/conf.d
         resources:
           requests:
             memory: "32Mi"   # BROKEN: Too low
@@ -98,6 +101,10 @@ spec:
           limits:
             memory: "64Mi"   # BROKEN: Too low
             cpu: "200m"
+      volumes:
+      - name: api-config
+        configMap:
+          name: api-config-missing  # BROKEN: ConfigMap doesn't exist
 EOF
 
 # Create broken API service
@@ -251,6 +258,10 @@ echo "📝 Creating solution ConfigMaps..."
 
 cat > /root/k8s-app/configmaps/api-config.yaml << 'EOF'
 # Solution: API ConfigMap with nginx configuration
+# To fix API pods, you need to:
+# 1. Create this ConfigMap: kubectl apply -f /root/k8s-app/configmaps/api-config.yaml
+# 2. Update API deployment to reference 'api-config' instead of 'api-config-missing'
+#    OR apply the fixed deployment: kubectl apply -f /root/k8s-app/deployments/api-deployment-SOLUTION.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -273,6 +284,7 @@ EOF
 
 cat > /root/k8s-app/configmaps/nginx-config.yaml << 'EOF'
 # Solution: Frontend nginx ConfigMap
+# Apply this to fix frontend pod: kubectl apply -f /root/k8s-app/configmaps/nginx-config.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
