@@ -14,7 +14,42 @@
 - Her git commit atmadan önce mutlaka rootdaki CLAUDE.md file güncelle
 - Her commit atıldığında root dizindeki CLAUDE.md file güncelle, md fileları güncelle
 
-## Recent Work - Fixed Verify Script Location for Killercoda (2025-10-07)
+## Recent Work - Fixed API Ready Count Bug in Verify Script (2025-10-07)
+
+### Corrected grep Pattern to Count Multiple "true" Values
+
+**Problem:**
+- verify-step2.sh reported only 1 API pod ready when both were ready
+- User output showed: `API pods ready: 1` but both pods were 1/1 Running
+- Script used: `grep -c "true"` which counts **lines** not occurrences
+- jsonpath returns: `true true` (space-separated on one line)
+- grep -c counted the line (1) instead of the word occurrences (2)
+
+**Root Cause:**
+```bash
+# Wrong:
+API_READY=$(... | grep -c "true")  # counts lines containing "true" = 1
+# When jsonpath returns: "true true" on single line
+
+# Should be:
+API_READY=$(... | grep -o "true" | wc -l)  # counts word occurrences = 2
+```
+
+**Solution:**
+- Changed `grep -c "true"` to `grep -o "true" | wc -l`
+- `grep -o` outputs each match on separate line
+- `wc -l` counts those lines
+- Fixed in 3 places: inline verify in /usr/local/bin, /root/verify-step2.sh, verify-step2.sh
+
+**Test:**
+```bash
+echo "true true" | grep -c "true"      # Returns: 1 ❌
+echo "true true" | grep -o "true" | wc -l  # Returns: 2 ✅
+```
+
+---
+
+## Previous Work - Fixed Verify Script Location for Killercoda (2025-10-07)
 
 ### Created verify-step2.sh in /root Directory During Setup
 

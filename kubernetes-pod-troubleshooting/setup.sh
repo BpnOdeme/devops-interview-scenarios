@@ -426,7 +426,7 @@ echo "Verifying Step 2: Service Communication and API Pods..."
 
 # Check if API pods are running
 API_RUNNING=$(kubectl get pods -n webapp -l app=api --no-headers 2>/dev/null | grep -c "Running")
-API_READY=$(kubectl get pods -n webapp -l app=api -o jsonpath='{.items[*].status.containerStatuses[*].ready}' 2>/dev/null | grep -c "true")
+API_READY=$(kubectl get pods -n webapp -l app=api -o jsonpath='{.items[*].status.containerStatuses[*].ready}' 2>/dev/null | grep -o "true" | wc -l)
 
 echo "API pods running: $API_RUNNING"
 echo "API pods ready: $API_READY"
@@ -501,7 +501,7 @@ echo "Verifying Step 2: Service Communication and API Pods..."
 
 # Check if API pods are running
 API_RUNNING=$(kubectl get pods -n webapp -l app=api --no-headers 2>/dev/null | grep -c "Running")
-API_READY=$(kubectl get pods -n webapp -l app=api -o jsonpath='{.items[*].status.containerStatuses[*].ready}' 2>/dev/null | grep -c "true")
+API_READY=$(kubectl get pods -n webapp -l app=api -o jsonpath='{.items[*].status.containerStatuses[*].ready}' 2>/dev/null | grep -o "true" | wc -l)
 
 echo "API pods running: $API_RUNNING"
 echo "API pods ready: $API_READY"
