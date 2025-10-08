@@ -14,7 +14,54 @@
 - Her git commit atmadan önce mutlaka rootdaki CLAUDE.md file güncelle
 - Her commit atıldığında root dizindeki CLAUDE.md file güncelle, md fileları güncelle
 
-## Recent Work - Fixed Step 2 Verification to Only Check API Endpoints (2025-10-08)
+## Recent Work - Replaced Minikube Commands with Kubeadm NodePort Access (2025-10-08)
+
+### Updated Step 4 and Step 5 for Kubeadm Clusters
+
+**Problem:**
+- Step 4 and Step 5 had minikube-specific commands (`minikube ip`)
+- Killercoda uses kubeadm cluster, not minikube
+- Need to use NodePort to access ingress controller
+
+**Root Cause:**
+- `minikube ip` doesn't exist in kubeadm clusters
+- Ingress controller exposed via NodePort service in kubeadm
+- Need to get node IP and NodePort to access ingress
+
+**Solution:**
+Replaced all minikube commands with kubeadm-compatible commands:
+
+```bash
+# Old (minikube):
+curl -H "Host: webapp.local" http://$(minikube ip)/
+
+# New (kubeadm with NodePort):
+INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
+NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/
+```
+
+**Changes Made:**
+1. **step4.md**:
+   - Removed `minikube addons` references
+   - Updated Task 6 (Test External Access) with NodePort approach
+   - Updated Task 7 (Add Host Entry) with node IP
+   - Updated Verification Commands section
+
+2. **step5.md**:
+   - Updated Task 3 (Test Complete Application Stack)
+   - Updated Section 6 (Final Health Check)
+   - Updated Final Verification script
+
+**Files Modified:**
+- kubernetes-pod-troubleshooting/step4.md (lines 13, 172-203, 220-226)
+- kubernetes-pod-troubleshooting/step5.md (lines 63-73, 198-206, 240-242)
+
+**User Request:** "step4 de minikube ile çalışmıyoruz kubeadm bulunmakta"
+
+---
+
+## Previous Work - Fixed Step 2 Verification to Only Check API Endpoints (2025-10-08)
 
 ### Updated Step 2 Verify Script and Expected Results
 

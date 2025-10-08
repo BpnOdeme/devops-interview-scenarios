@@ -10,7 +10,7 @@ Based on the current setup:
 - Frontend deployment is **ContainerCreating** - references non-existent ConfigMap (`nginx-config-missing`)
 - Frontend service doesn't exist yet
 - No ingress configuration has been created
-- Ingress controller should be enabled via minikube addons
+- Ingress controller should already be deployed (Nginx Ingress Controller)
 
 ## Tasks
 
@@ -19,14 +19,10 @@ Based on the current setup:
 First, verify the ingress controller is running:
 
 ```bash
-# Check if ingress addon is enabled (for minikube)
-minikube addons list | grep ingress
 
 # Check ingress controller pods
 kubectl get pods -n ingress-nginx
 
-# If not enabled, enable it
-minikube addons enable ingress
 
 # Wait for ingress controller to be ready
 kubectl wait --namespace ingress-nginx \
@@ -174,17 +170,21 @@ EOF
 Get the ingress IP and test access:
 
 ```bash
-# Get ingress IP (for minikube)
-minikube ip
-
-# Or get ingress status
+# Get ingress status and IP
 kubectl get ingress webapp-ingress -n webapp
 
-# Test access to the application
-curl -H "Host: webapp.local" http://$(minikube ip)/
+# Get the ingress controller service IP
+INGRESS_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+
+# If LoadBalancer not available, get NodePort
+INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
+NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+
+# Test access to the application (using NodePort)
+curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/
 
 # Test API endpoint
-curl -H "Host: webapp.local" http://$(minikube ip)/api/health
+curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/api/health
 ```
 
 ### 7. Add Host Entry (if needed)
@@ -192,11 +192,15 @@ curl -H "Host: webapp.local" http://$(minikube ip)/api/health
 If testing with domain name:
 
 ```bash
-# Add to /etc/hosts for local testing
-echo "$(minikube ip) webapp.local" >> /etc/hosts
+# Get node IP
+NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
 
-# Then test with:
-curl http://webapp.local/
+# Add to /etc/hosts for local testing
+echo "$NODE_IP webapp.local" | sudo tee -a /etc/hosts
+
+# Then test with NodePort:
+INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
+curl http://webapp.local:$INGRESS_PORT/
 ```
 
 ## Expected Results
@@ -215,7 +219,11 @@ kubectl get pods -n webapp
 
 # Test ingress routing
 kubectl get ingress -n webapp
-curl -H "Host: webapp.local" http://$(minikube ip)/
+
+# Get NodePort and test
+INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
+NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/
 
 # Check frontend logs
 kubectl logs deployment/frontend -n webapp

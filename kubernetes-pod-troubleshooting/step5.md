@@ -59,14 +59,18 @@ Perform end-to-end testing of the complete application:
 # Test all components are running
 kubectl get all -n webapp
 
+# Get ingress access details
+INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
+NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+
 # Test frontend access
-curl -H "Host: webapp.local" http://$(minikube ip)/
+curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/
 
 # Test API directly
-curl -H "Host: webapp.local" http://$(minikube ip)/api/health
+curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/api/health
 
 # Test API endpoints
-curl -H "Host: webapp.local" http://$(minikube ip)/api/users
+curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/api/users
 
 # Test DNS resolution from Redis pod (using getent - works in alpine)
 kubectl exec -it deployment/redis -n webapp -- getent hosts api-service
@@ -191,9 +195,13 @@ kubectl get pods -n webapp -o wide
 # Verify all endpoints are healthy
 kubectl get endpoints -n webapp
 
+# Get ingress access details for testing
+INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
+NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+
 # Test load balancing (if multiple API replicas)
 for i in {1..5}; do
-  curl -H "Host: webapp.local" http://$(minikube ip)/api/health
+  curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/api/health
   echo ""
 done
 ```
@@ -229,7 +237,9 @@ echo -e "\nPersistent Volumes:"
 kubectl get pvc -n webapp
 
 echo -e "\nApplication Test:"
-curl -H "Host: webapp.local" http://$(minikube ip)/api/health
+INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
+NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/api/health
 
 echo -e "\n🎉 If all components are running and tests pass, congratulations!"
 echo "You have successfully fixed the Kubernetes application!"
