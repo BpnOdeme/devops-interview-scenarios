@@ -195,11 +195,14 @@ kubectl get endpoints postgres-service -n webapp
 
 After completing this step:
 - ✅ API pods should be Running and healthy (2/2 ready)
-- ✅ All services should have valid endpoints
+- ✅ API service should have valid endpoints (2 pod IPs)
+- ✅ postgres-service should have valid endpoints (1 pod IP from the Running postgres pod)
+- ✅ redis-cache should have valid endpoints (1 pod IP)
+- ⚠️ **frontend-service will have NO endpoints** (pod still ContainerCreating - ConfigMap created in Step 4)
 - ✅ DNS resolution should work between services
 - ✅ Service selectors should match pod labels
 - ⚠️ Frontend still ContainerCreating (will fix in Step 4)
-- ⚠️ Postgres still Pending (will fix in Step 3)
+- ⚠️ Postgres may be Pending if PVC not created (will fix in Step 3)
 
 ## Verification Commands
 

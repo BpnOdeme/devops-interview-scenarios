@@ -14,7 +14,57 @@
 - Her git commit atmadan önce mutlaka rootdaki CLAUDE.md file güncelle
 - Her commit atıldığında root dizindeki CLAUDE.md file güncelle, md fileları güncelle
 
-## Recent Work - Enhanced Lab with Log Analysis and Real Node.js API (2025-10-07)
+## Recent Work - Fixed Step 2 Verification to Only Check API Endpoints (2025-10-08)
+
+### Updated Step 2 Verify Script and Expected Results
+
+**Problem:**
+- Step 2 verify script checked ALL services for endpoints (including frontend)
+- Frontend pod is ContainerCreating until Step 4 (needs ConfigMap)
+- Verify script failed because frontend-service had `<none>` endpoints
+- Expected Results incorrectly stated "All services should have valid endpoints"
+
+**Root Cause:**
+```bash
+# Wrong approach - checking all services:
+for service in "${REQUIRED_SERVICES[@]}"; do
+    # This checked frontend-service too!
+    ENDPOINTS=$(kubectl get endpoints $service ...)
+    if [ -z "$ENDPOINTS" ]; then
+        ((MISSING_SERVICES++))  # FAIL on frontend
+    fi
+done
+```
+
+**Solution:**
+1. **verify-step2.sh**: Only check api-service endpoints
+2. **setup.sh line 525-546**: Updated inline verify script
+3. **step2.md Expected Results**: Clarified which services will have endpoints
+
+**Changes:**
+```bash
+# New approach - only check API endpoints:
+for service in "${REQUIRED_SERVICES[@]}"; do
+    if kubectl get svc $service -n webapp >/dev/null 2>&1; then
+        echo "✅ Service $service exists"
+    fi
+done
+
+# Only check API service endpoints (frontend fixed in Step 4)
+ENDPOINTS=$(kubectl get endpoints api-service -n webapp ...)
+```
+
+**Updated Expected Results:**
+- ✅ API service should have endpoints (2 pod IPs)
+- ✅ postgres-service and redis-cache should have endpoints
+- ⚠️ **frontend-service will have NO endpoints** (ConfigMap created in Step 4)
+
+**User Question:** "step 2 check edildiğinde frontend servisinin endpoint'i olup olmadığına bakılacak mı?"
+**Answer:** Hayır, artık sadece API endpoint kontrolü yapılıyor.
+
+---
+
+## Previous Work - Enhanced Lab with Log Analysis and Real Node.js API (2025-10-07)
 
 ### Added DevOps Skills: Log Analysis and Application Troubleshooting
 

@@ -35,27 +35,27 @@ echo ""
 echo "Services found: $SERVICES_COUNT"
 echo "Services with endpoints: $ENDPOINTS_COUNT"
 
-# Check specific services
+# Check specific services exist
 REQUIRED_SERVICES=("api-service" "frontend-service" "postgres-service" "redis-cache")
 MISSING_SERVICES=0
 
 for service in "${REQUIRED_SERVICES[@]}"; do
     if kubectl get svc $service -n webapp >/dev/null 2>&1; then
         echo "✅ Service $service exists"
-
-        # Check if service has endpoints
-        ENDPOINTS=$(kubectl get endpoints $service -n webapp -o jsonpath='{.subsets[0].addresses}' 2>/dev/null)
-        if [ -n "$ENDPOINTS" ] && [ "$ENDPOINTS" != "null" ]; then
-            echo "  ✅ Service $service has endpoints"
-        else
-            echo "  ❌ Service $service has no endpoints"
-            ((MISSING_SERVICES++))
-        fi
     else
         echo "❌ Service $service is missing"
         ((MISSING_SERVICES++))
     fi
 done
+
+# Only check API service endpoints (frontend will be fixed in Step 4)
+ENDPOINTS=$(kubectl get endpoints api-service -n webapp -o jsonpath='{.subsets[0].addresses}' 2>/dev/null)
+if [ -n "$ENDPOINTS" ] && [ "$ENDPOINTS" != "null" ]; then
+    echo "✅ API service has endpoints"
+else
+    echo "❌ API service has no endpoints"
+    ((MISSING_SERVICES++))
+fi
 
 # Check API service selector
 API_SELECTOR=$(kubectl get svc api-service -n webapp -o jsonpath='{.spec.selector.app}' 2>/dev/null)
