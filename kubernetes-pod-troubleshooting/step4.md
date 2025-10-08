@@ -68,20 +68,33 @@ After creating the ConfigMap, check if the frontend pod starts:
 
 ```bash
 # Watch the frontend pod status
-kubectl get pods -n webapp -w
+kubectl get pods -n webapp -l app=frontend
 
-# Once running, check pod logs
+# Once running, check pod logs for nginx startup
 kubectl logs deployment/frontend -n webapp
+
+# Look for successful startup messages:
+# ✅ "start worker process"
+# ✅ nginx successfully started
+# ❌ If you see "config" errors, check ConfigMap content
 
 # Verify the ConfigMap was created
 kubectl get configmap nginx-config-missing -n webapp
+
+# Optional: Verify nginx config inside pod
+kubectl exec -it deployment/frontend -n webapp -- nginx -t
+# Expected: "configuration file /etc/nginx/nginx.conf syntax is ok"
 ```
 
-### 4. Create Frontend Service
+### 4. Verify Frontend Service
 
-The frontend needs a service for ingress to route traffic to it:
+Check if the frontend service exists (should have been created in Step 2):
 
 ```bash
+# Check if frontend-service exists
+kubectl get svc frontend-service -n webapp
+
+# If it doesn't exist, create it:
 kubectl apply -f - <<EOF
 apiVersion: v1
 kind: Service
@@ -99,6 +112,9 @@ EOF
 
 # Verify service and endpoints
 kubectl get svc,endpoints -n webapp | grep frontend
+
+# Endpoints should now show the frontend pod IP
+# Example: endpoints/frontend-service   192.168.0.11:80
 ```
 
 ### 5. Create Ingress Configuration

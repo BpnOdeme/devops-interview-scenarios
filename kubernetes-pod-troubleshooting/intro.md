@@ -15,7 +15,7 @@ You've been called to fix a critical Kubernetes cluster where multiple pods are 
 ## The Problem
 
 The operations team reports multiple issues:
-- ❌ Pods are in CrashLoopBackOff state
+- ❌ Pods are in ContainerCreating,Pending states
 - ❌ Application is not accessible from outside the cluster
 - ❌ Database connections are failing
 - ❌ Services cannot communicate with each other
