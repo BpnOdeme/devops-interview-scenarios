@@ -59,18 +59,18 @@ Perform end-to-end testing of the complete application:
 # Test all components are running
 kubectl get all -n webapp
 
-# Get ingress access details
+# Get ingress NodePort
 INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
-NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+echo "Ingress NodePort: $INGRESS_PORT"
 
-# Test frontend access
-curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/
+# Test from terminal
+curl -H "Host: webapp.local" http://localhost:$INGRESS_PORT/
+curl -H "Host: webapp.local" http://localhost:$INGRESS_PORT/api/health
+curl -H "Host: webapp.local" http://localhost:$INGRESS_PORT/api/users
 
-# Test API directly
-curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/api/health
-
-# Test API endpoints
-curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/api/users
+# OR use Killercoda Traffic Port Accessor (Top right of screen)
+# Click "Traffic Port Accessor" and enter the NodePort number
+# Then access in browser: http://<killercoda-url>/
 
 # Test DNS resolution from Redis pod (using getent - works in alpine)
 kubectl exec -it deployment/redis -n webapp -- getent hosts api-service
@@ -197,13 +197,17 @@ kubectl get endpoints -n webapp
 
 # Get ingress access details for testing
 INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
-NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+echo "Ingress NodePort: $INGRESS_PORT"
 
 # Test load balancing (if multiple API replicas)
 for i in {1..5}; do
-  curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/api/health
+  curl -H "Host: webapp.local" http://localhost:$INGRESS_PORT/api/health
   echo ""
 done
+
+# OR use Killercoda Traffic Port Accessor
+# Click "Traffic Port Accessor" (top right) and enter the NodePort number
+# Access in browser to test frontend and API endpoints
 ```
 
 ## Expected Results
@@ -238,8 +242,7 @@ kubectl get pvc -n webapp
 
 echo -e "\nApplication Test:"
 INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
-NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
-curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/api/health
+curl -H "Host: webapp.local" http://localhost:$INGRESS_PORT/api/health
 
 echo -e "\n🎉 If all components are running and tests pass, congratulations!"
 echo "You have successfully fixed the Kubernetes application!"

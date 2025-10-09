@@ -87,34 +87,20 @@ kubectl exec -it deployment/frontend -n webapp -- nginx -t
 
 ### 5. Verify Frontend Service
 
-Check if the frontend service exists (should have been created in Step 2):
+Verify the frontend service created in Step 2:
 
 ```bash
 # Check if frontend-service exists
 kubectl get svc frontend-service -n webapp
 
-# If it doesn't exist, create it:
-kubectl apply -f - <<EOF
-apiVersion: v1
-kind: Service
-metadata:
-  name: frontend-service
-  namespace: webapp
-spec:
-  selector:
-    app: frontend
-  ports:
-  - port: 80
-    targetPort: 80
-  type: ClusterIP
-EOF
+# Verify service has endpoints now that pod is running
+kubectl get endpoints frontend-service -n webapp
 
-# Verify service and endpoints
-kubectl get svc,endpoints -n webapp | grep frontend
-
-# Endpoints should now show the frontend pod IP
-# Example: endpoints/frontend-service   192.168.0.11:80
+# Should show the frontend pod IP
+# Example: 192.168.0.11:80
 ```
+
+**Note:** Frontend service should have been created in Step 2. If missing, refer back to Step 2 to create it.
 
 ### 6. Create Ingress Configuration
 
@@ -173,38 +159,28 @@ EOF
 Get the ingress IP and test access:
 
 ```bash
-# Get ingress status and IP
+# Get ingress status
 kubectl get ingress webapp-ingress -n webapp
 
-# Get the ingress controller service IP
-INGRESS_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-
-# If LoadBalancer not available, get NodePort
+# Get the ingress NodePort
 INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
-NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+echo "Ingress NodePort: $INGRESS_PORT"
 
-# Test access to the application (using NodePort)
-curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/
-
-# Test API endpoint
-curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/api/health
+# Test from terminal
+curl -H "Host: webapp.local" http://localhost:$INGRESS_PORT/
+curl -H "Host: webapp.local" http://localhost:$INGRESS_PORT/api/health
 ```
 
-### 8. Add Host Entry (if needed)
+### 8. Access from Browser (Killercoda)
 
-If testing with domain name:
+Use Killercoda's Traffic Port Accessor feature:
 
-```bash
-# Get node IP
-NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+1. Click **"Traffic Port Accessor"** button (top right of screen)
+2. Enter the NodePort number from above
+3. Access the application in your browser
+4. Test both frontend (/) and API (/api/health) endpoints
 
-# Add to /etc/hosts for local testing
-echo "$NODE_IP webapp.local" | sudo tee -a /etc/hosts
-
-# Then test with NodePort:
-INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
-curl http://webapp.local:$INGRESS_PORT/
-```
+**Note:** The Host header requirement can be bypassed by using Killercoda's traffic accessor or by testing from the terminal.
 
 ## Expected Results
 
@@ -225,8 +201,7 @@ kubectl get ingress -n webapp
 
 # Get NodePort and test
 INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
-NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
-curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/
+curl -H "Host: webapp.local" http://localhost:$INGRESS_PORT/
 
 # Check frontend logs
 kubectl logs deployment/frontend -n webapp

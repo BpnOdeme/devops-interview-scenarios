@@ -14,6 +14,91 @@
 - Her git commit atmadan önce mutlaka rootdaki CLAUDE.md file güncelle
 - Her commit atıldığında root dizindeki CLAUDE.md file güncelle, md fileları güncelle
 
+## Recent Work - Killercoda Traffic Port Accessor Support (2025-10-09)
+
+### Added Killercoda-Specific Access Instructions
+
+**User Request:** "step 4 üzerinde hala 5. Verify Frontend Service yaml açıktan tutmasına gerek yok step 2 de oluşturmuştuk zaten fakat step 5 de neler yapılacak doğru çalılıyor mu emin olur musun"
+
+**Problem:**
+- step4.md had duplicate frontend service YAML (already created in step2)
+- curl commands used `$NODE_IP:$INGRESS_PORT` which requires extra variable
+- Missing instructions for Killercoda's Traffic Port Accessor feature
+- Not optimized for Killercoda platform
+
+**Changes Made:**
+
+**step4.md:**
+1. **Removed Duplicate YAML (Task 5):**
+   - Deleted full service YAML definition (lines 96-110)
+   - Changed to simple verification of existing service
+   - Added note: "Frontend service should have been created in Step 2"
+
+2. **Simplified Access Testing (Task 7):**
+   - Changed curl from `http://$NODE_IP:$INGRESS_PORT/` to `http://localhost:$INGRESS_PORT/`
+   - Removed unnecessary NODE_IP variable
+   - Simplified verification commands
+
+3. **Added Traffic Port Accessor (Task 8):**
+   ```markdown
+   ### 8. Access from Browser (Killercoda)
+
+   Use Killercoda's Traffic Port Accessor feature:
+   1. Click "Traffic Port Accessor" button (top right of screen)
+   2. Enter the NodePort number from above
+   3. Access the application in your browser
+   4. Test both frontend (/) and API (/api/health) endpoints
+   ```
+
+4. **Updated Verification Commands:**
+   - Changed from `http://$NODE_IP:$INGRESS_PORT/` to `http://localhost:$INGRESS_PORT/`
+   - Removed NODE_IP variable references
+
+**step5.md:**
+1. **Updated Task 3 - Test Complete Application Stack:**
+   - Changed all curl commands to use localhost
+   - Added Traffic Port Accessor instructions
+   - Removed NODE_IP variable
+
+2. **Updated Task 6 - Final Health Check:**
+   - Changed curl to use localhost
+   - Added Traffic Port Accessor comment
+   - Removed NODE_IP variable
+
+3. **Updated Final Verification:**
+   - Changed application test curl to use localhost
+   - Removed NODE_IP variable
+
+**Before:**
+```bash
+INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
+NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/
+```
+
+**After:**
+```bash
+INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
+echo "Ingress NodePort: $INGRESS_PORT"
+curl -H "Host: webapp.local" http://localhost:$INGRESS_PORT/
+
+# OR use Killercoda Traffic Port Accessor (Top right of screen)
+# Click "Traffic Port Accessor" and enter the NodePort number
+```
+
+**Benefits:**
+- ✅ Removed duplicate YAML from step4 (cleaner instructions)
+- ✅ Simplified curl commands (no need for NODE_IP)
+- ✅ Added platform-specific instructions (Traffic Port Accessor)
+- ✅ Consistent approach across step4 and step5
+- ✅ Better user experience in Killercoda environment
+
+**Files Changed:**
+- kubernetes-pod-troubleshooting/step4.md (removed duplicate YAML, added Traffic Port Accessor)
+- kubernetes-pod-troubleshooting/step5.md (updated all curl commands to localhost)
+
+---
+
 ## Recent Work - Removed Redundant verify-step2.sh from /root (2025-10-08)
 
 ### Cleaned Up Duplicate Verify Script
