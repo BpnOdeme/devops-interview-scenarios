@@ -21,10 +21,10 @@ for app in "${REQUIRED_APPS[@]}"; do
 done
 
 # Check if API ConfigMap exists
-if kubectl get configmap api-code -n webapp >/dev/null 2>&1; then
-    echo "✅ api-code ConfigMap exists"
+if kubectl get configmap api-config -n webapp >/dev/null 2>&1; then
+    echo "✅ api-config ConfigMap exists"
 else
-    echo "❌ api-code ConfigMap is missing"
+    echo "❌ api-config ConfigMap is missing"
     ((FAILED_APPS++))
 fi
 
@@ -39,9 +39,9 @@ fi
 
 # Test API health endpoint
 echo "Testing API health..."
-MINIKUBE_IP=$(minikube ip 2>/dev/null)
-if [ -n "$MINIKUBE_IP" ]; then
-    API_HEALTH=$(curl -s -H "Host: webapp.local" "http://$MINIKUBE_IP/api/health" | grep -o "healthy" 2>/dev/null)
+INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}' 2>/dev/null)
+if [ -n "$INGRESS_PORT" ]; then
+    API_HEALTH=$(curl -s -H "Host: webapp.local" "http://localhost:$INGRESS_PORT/api/health" | grep -o "healthy" 2>/dev/null)
     if [ -n "$API_HEALTH" ]; then
         echo "✅ API health endpoint is working"
     else
@@ -49,7 +49,7 @@ if [ -n "$MINIKUBE_IP" ]; then
         ((FAILED_APPS++))
     fi
 else
-    echo "⚠️  Cannot test API health - minikube IP not available"
+    echo "⚠️  Cannot test API health - ingress NodePort not available"
 fi
 
 # Check for recent error events
