@@ -14,7 +14,120 @@
 - Her git commit atmadan önce mutlaka rootdaki CLAUDE.md file güncelle
 - Her commit atıldığında root dizindeki CLAUDE.md file güncelle, md fileları güncelle
 
-## Recent Work - Replaced Minikube Commands with Kubeadm NodePort Access (2025-10-08)
+## Recent Work - Converted to Medium Difficulty (Interview Level) (2025-10-08)
+
+### Removed Obvious Hints for Real DevOps Troubleshooting Experience
+
+**User Request:** "bu devops case'inde ip uçları ve çözümleri ne ölçüde paylaşmalıyız? config-missing image..-wrong tarzı çok kolay hale getirmez mi?"
+
+**Decision:** Orta Seviye (İş Görüşmesi seviyesi)
+
+**Changes Made:**
+
+#### 1. Removed All "BROKEN" Comments from setup.sh
+**Before:**
+```yaml
+image: postgres:13-wrong  # BROKEN: Wrong image tag
+selector:
+  app: backend  # BROKEN: Wrong selector - should be 'api'
+name: api-config-missing  # BROKEN: ConfigMap doesn't exist
+```
+
+**After:**
+```yaml
+image: postgres:13-wrong
+selector:
+  app: backend
+name: api-config
+```
+
+**Rationale:** Real production issues don't have comments explaining what's wrong!
+
+#### 2. Changed ConfigMap Naming from "*-missing" to Normal Names
+**Before:**
+- `api-config-missing` → Too obvious
+- `nginx-config-missing` → Screams "I'm missing!"
+
+**After:**
+- `api-config` → Normal name, investigate to find it doesn't exist
+- `nginx-config` → Normal name
+
+**Impact:** DevOps must use `kubectl describe pod` and read error messages to find missing ConfigMaps.
+
+#### 3. Rewrote All Step Guides to be Investigation-Focused
+
+**step2.md** - Before (too easy):
+```markdown
+### Fix API Pods
+**Issues found:**
+1. ConfigMap `api-config-missing` doesn't exist
+2. Container port is wrong: `80` → should be `3000`
+3. Resources too low: need more memory
+4. Image is old version: should be nginx:alpine
+
+**Fix:**
+kubectl apply -f /root/k8s-app/configmaps/api-config.yaml
+```
+
+**step2.md** - After (investigation-focused):
+```markdown
+### 1. Investigate API Pod Issues
+The API pods are not running. Find out why:
+
+# Check API pod status
+kubectl describe pod -l app=api -n webapp
+
+**Common investigation steps:**
+- Is there a missing ConfigMap?
+- Are there volume mount errors?
+- Check what ConfigMaps exist
+
+**Hint:** Look in `/root/k8s-app/configmaps/` for solution files.
+```
+
+**step3.md** - Changed to investigation workflow:
+- Don't tell them image is wrong → make them check with `kubectl get deployment`
+- Don't tell them PVC name is wrong → make them compare with `kubectl describe`
+- Provide investigation commands, not direct answers
+
+**step4.md** - Changed to problem-solving approach:
+- Don't say "ConfigMap nginx-config-missing doesn't exist" → say "Frontend pod not starting, investigate why"
+- Make them use `kubectl describe pod` to find the issue
+- Hints instead of answers
+
+#### 4. Key Benefits of Medium Difficulty:
+- ✅ **Tests kubectl skills**: Must use describe, logs, get, events
+- ✅ **Tests troubleshooting ability**: Can't just follow instructions blindly
+- ✅ **Realistic scenarios**: Mirrors actual production debugging
+- ✅ **Interview appropriate**: 30-45 minutes, tests DevOps fundamentals
+- ✅ **Still guided**: Solution files available, hints provided
+
+#### 5. What Stayed the Same:
+- ✅ Solution YAML files still in `/root/k8s-app/` (prepared but not applied)
+- ✅ Verification scripts still work
+- ✅ Step-by-step structure maintained
+- ✅ SOLUTION.md still has detailed answers for review
+
+**Files Modified:**
+- setup.sh: Removed all `# BROKEN` comments, changed `-missing`/`-wrong` naming
+- step2.md: Completely rewritten to investigation-focused (120 lines → 184 lines)
+- step3.md: Rewritten to problem-solving approach (170 lines → 202 lines)
+- step4.md: Updated to investigation workflow
+- CLAUDE.md: Documented all changes
+
+**Comparison - Difficulty Levels:**
+
+| Aspect | Easy (Before) | Medium (Now) | Hardcore |
+|--------|---------------|--------------|----------|
+| Naming | `config-missing` | `api-config` | `api-config` |
+| Comments | `# BROKEN` | None | None |
+| Steps | Direct fixes | Investigation + hints | No hints |
+| YAML files | Ready with comments | Ready, no comments | Must write yourself |
+| Time | 15-20 min | 30-45 min | 60-90 min |
+
+---
+
+## Previous Work - Replaced Minikube Commands with Kubeadm NodePort Access (2025-10-08)
 
 ### Updated Step 4 and Step 5 for Kubeadm Clusters
 

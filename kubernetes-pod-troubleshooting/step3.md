@@ -1,35 +1,85 @@
-# Step 3: Resolve Storage and Database Issues
+# Step 3: Fix Storage and Database Issues
 
 ## Overview
 
-In this step, you'll fix the persistent storage issues and get the database running properly. The PostgreSQL pod is failing due to storage and configuration problems.
+In this step, you'll resolve storage problems and get the PostgreSQL database running properly. This involves fixing PersistentVolumeClaim issues and database configuration.
 
 ## Current Problems
 
-Based on the setup, the PostgreSQL pod is in **Pending** state due to:
-- Database deployment has wrong image tag (`postgres:13-wrong` instead of `postgres:13`)
-- Missing PersistentVolumeClaim (no PVC defined in manifests)
-- Missing critical environment variables (POSTGRES_USER, POSTGRES_PASSWORD)
-- Insufficient memory limits for database operation (64Mi is too low)
+The database pod has multiple issues:
+- **Postgres pod**: May be Pending or ImagePullBackOff - investigate why
+- **Storage**: PVC might not be bound
+- **Database configuration**: Missing environment variables
 
 ## Tasks
 
-### 1. Create Persistent Volume Claim
+### 1. Investigate Postgres Pod Status
 
-The PostgreSQL deployment needs persistent storage, but no PVC exists. Let's create one:
+Check why the postgres pod isn't running:
 
 ```bash
+# Check postgres pod status
+kubectl get pods -n webapp -l app=postgres
+
+# Get detailed information
+kubectl describe pod -l app=postgres -n webapp
+
+# Look for common issues:
+# - Image pull errors
+# - PVC binding issues
+# - Missing environment variables
+```
+
+### 2. Fix Image Issues
+
+If you see ImagePullBackOff:
+
+```bash
+# Check current image
+kubectl get deployment postgres -n webapp -o jsonpath='{.spec.template.spec.containers[0].image}'
+
+# Common postgres images:
+# - postgres:13
+# - postgres:14
+# - postgres:15
+
+# Fix the deployment
+kubectl set image deployment/postgres postgres=postgres:15 -n webapp
+
+# Or edit directly
+kubectl edit deployment postgres -n webapp
+```
+
+### 3. Investigate Storage Issues
+
+Check PersistentVolumeClaim status:
+
+```bash
+# List PVCs
+kubectl get pvc -n webapp
+
+# Describe PVC to see why it's not binding
+kubectl describe pvc postgres-pvc -n webapp
+
 # Check available storage classes
 kubectl get storageclass
 
-# Check current PVC status (should be empty)
-kubectl get pvc -n webapp
+# Common issues:
+# - Wrong storage class name
+# - Storage class doesn't exist
+# - Insufficient resources
 ```
 
-Create a new PVC for PostgreSQL:
+**Fix PVC if needed:**
 
 ```bash
-# Create PVC with available storage class
+# Check current PVC configuration
+kubectl get pvc postgres-pvc -n webapp -o yaml
+
+# Delete and recreate if wrong storage class
+kubectl delete pvc postgres-pvc -n webapp
+
+# Create correct PVC
 kubectl apply -f - <<EOF
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -39,133 +89,114 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: local-path  # Use available storage class from 'kubectl get sc'
+  storageClassName: local-path  # Use the correct storage class for your cluster
   resources:
     requests:
       storage: 1Gi
 EOF
-
-# Verify PVC is created and bound
-kubectl get pvc -n webapp
 ```
 
-### 2. Fix Database Deployment
+**Hint:** Check available storage classes with `kubectl get storageclass`
 
-The PostgreSQL deployment has several critical issues. Let's fix them all:
+### 4. Fix Postgres Deployment Configuration
+
+Check the deployment for issues:
 
 ```bash
-# First, check the current deployment
+# Get current deployment configuration
 kubectl get deployment postgres -n webapp -o yaml
+
+# Check environment variables
+kubectl get deployment postgres -n webapp -o jsonpath='{.spec.template.spec.containers[0].env}'
+
+# Check PVC reference
+kubectl get deployment postgres -n webapp -o yaml | grep -A 5 "volumes:"
 ```
 
-**Issues identified:**
-1. **Wrong image**: `postgres:13-wrong` should be `postgres:13`
-2. **Missing environment variables**: No POSTGRES_USER and POSTGRES_PASSWORD
-3. **Insufficient memory**: 64Mi is too low for PostgreSQL
-4. **Missing volume**: No PVC is mounted
+**Common fixes needed:**
 
-Apply the corrected deployment:
-
+1. **Add missing environment variables:**
 ```bash
-kubectl apply -f - <<EOF
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: postgres
-  namespace: webapp
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: postgres
-  template:
-    metadata:
-      labels:
-        app: postgres
-    spec:
-      containers:
-      - name: postgres
-        image: postgres:13  # Fixed image tag
-        ports:
-        - containerPort: 5432
-        env:
-        - name: POSTGRES_DB
-          value: webapp
-        - name: POSTGRES_USER
-          value: webapp_user
-        - name: POSTGRES_PASSWORD
-          value: webapp_password
-        - name: PGDATA
-          value: /var/lib/postgresql/data/pgdata
-        resources:
-          requests:
-            memory: "256Mi"  # Increased memory
-            cpu: "250m"
-          limits:
-            memory: "512Mi"  # Increased memory
-            cpu: "500m"
-        volumeMounts:
-        - name: postgres-storage
-          mountPath: /var/lib/postgresql/data
-      volumes:
-      - name: postgres-storage
-        persistentVolumeClaim:
-          claimName: postgres-pvc  # Correct PVC name
-EOF
+kubectl set env deployment/postgres -n webapp \
+  POSTGRES_USER=webapp_user \
+  POSTGRES_PASSWORD=webapp_pass \
+  POSTGRES_DB=webapp
 ```
 
-### 3. Create Database Secret (Better Practice)
-
-Instead of hardcoding passwords, create a secret:
-
+2. **Fix PVC name if wrong:**
 ```bash
-# Create database credentials secret
-kubectl create secret generic postgres-secret \
-  --from-literal=username=webapp_user \
-  --from-literal=password=webapp_password \
-  --from-literal=database=webapp \
-  -n webapp
-
-# Update deployment to use secret (optional improvement)
+kubectl edit deployment postgres -n webapp
+# Update volumes section to reference correct PVC name
 ```
 
-### 4. Verify Database Functionality
+3. **Increase resource limits if too low:**
+```bash
+kubectl set resources deployment postgres -n webapp \
+  --limits=memory=256Mi,cpu=500m \
+  --requests=memory=128Mi,cpu=250m
+```
 
-Once the pod is running, test database connectivity:
+### 5. Verify Database is Running
+
+After fixes, verify the database:
 
 ```bash
-# Check if postgres pod is running
+# Check pod status
 kubectl get pods -n webapp -l app=postgres
 
-# Test database connection
-kubectl exec -it deployment/postgres -n webapp -- psql -U webapp_user -d webapp -c "SELECT version();"
+# Check pod logs
+kubectl logs deployment/postgres -n webapp
 
-# Check if database accepts connections
-kubectl exec -it deployment/postgres -n webapp -- pg_isready -U webapp_user -d webapp
+# Look for:
+# ✅ "database system is ready to accept connections"
+# ❌ "FATAL: password authentication failed"
+
+# Test database connection
+kubectl exec -it deployment/postgres -n webapp -- pg_isready -U webapp_user
+
+# Test actual connection
+kubectl exec -it deployment/postgres -n webapp -- psql -U webapp_user -d webapp -c "SELECT version();"
 ```
 
-## Expected Results
+### 6. Verify PVC is Bound
 
-After completing this step:
-- PVC should be bound to available storage
-- PostgreSQL pod should be running and healthy
-- Database should accept connections
-- Backend pod should be able to connect to database
-
-## Verification Commands
+Check that the PVC is properly bound:
 
 ```bash
 # Check PVC status
 kubectl get pvc -n webapp
 
-# Check postgres pod logs
-kubectl logs deployment/postgres -n webapp
+# Verify it's bound to a PV
+kubectl describe pvc postgres-pvc -n webapp
 
-# Test database connectivity
-kubectl exec -it deployment/postgres -n webapp -- pg_isready
-
-# Verify backend can connect to database
-kubectl logs deployment/api -n webapp
+# Check the actual PV
+kubectl get pv
 ```
 
-**Next**: Configure ingress and external access to complete the application setup.
+## Expected Results
+
+After completing this step:
+- ✅ Postgres pod should be Running (1/1 ready)
+- ✅ PVC should be Bound status
+- ✅ Database should accept connections
+- ✅ postgres-service should have valid endpoint
+- ✅ Pod logs show "ready to accept connections"
+- ⚠️ Frontend still ContainerCreating (will fix in Step 4)
+
+## Verification Commands
+
+```bash
+# Complete status check
+kubectl get pods,pvc -n webapp
+
+# Check postgres service endpoint
+kubectl get endpoints postgres-service -n webapp
+
+# Test database connection
+kubectl exec -it deployment/postgres -n webapp -- pg_isready -U webapp_user
+
+# Check pod logs
+kubectl logs deployment/postgres -n webapp | tail -20
+```
+
+**Next**: Proceed to Step 4 to configure ingress and enable external access.

@@ -40,19 +40,18 @@ spec:
     spec:
       containers:
       - name: postgres
-        image: postgres:13-wrong  # BROKEN: Wrong image tag
+        image: postgres:13-wrong
         ports:
         - containerPort: 5432
         env:
         - name: POSTGRES_DB
           value: webapp
-        # BROKEN: Missing POSTGRES_USER and POSTGRES_PASSWORD
         resources:
           requests:
-            memory: "64Mi"  # BROKEN: Too low memory
+            memory: "64Mi"
             cpu: "250m"
           limits:
-            memory: "64Mi"  # BROKEN: Too low memory
+            memory: "64Mi"
             cpu: "500m"
         volumeMounts:
         - name: postgres-storage
@@ -60,7 +59,7 @@ spec:
       volumes:
       - name: postgres-storage
         persistentVolumeClaim:
-          claimName: postgres-pvc-wrong  # BROKEN: Wrong PVC name
+          claimName: postgres-pvc-wrong
 EOF
 
 # Create broken API deployment
@@ -83,23 +82,23 @@ spec:
     spec:
       containers:
       - name: api
-        image: nginx:1.21  # BROKEN: Old version, should be nginx:alpine
+        image: nginx:1.21
         ports:
-        - containerPort: 80  # BROKEN: Wrong port (should be 3000 for API)
+        - containerPort: 80
         volumeMounts:
         - name: api-config
           mountPath: /etc/nginx/conf.d
         resources:
           requests:
-            memory: "32Mi"   # BROKEN: Too low
+            memory: "32Mi"
             cpu: "100m"
           limits:
-            memory: "64Mi"   # BROKEN: Too low
+            memory: "64Mi"
             cpu: "200m"
       volumes:
       - name: api-config
         configMap:
-          name: api-config-missing  # BROKEN: ConfigMap doesn't exist
+          name: api-config
 EOF
 
 # Create broken API service
@@ -112,7 +111,7 @@ metadata:
   namespace: webapp
 spec:
   selector:
-    app: backend  # BROKEN: Wrong selector - should be 'api'
+    app: backend
   ports:
   - port: 3000
     targetPort: 3000
@@ -150,7 +149,7 @@ spec:
       volumes:
       - name: nginx-config
         configMap:
-          name: nginx-config-missing  # BROKEN: ConfigMap doesn't exist
+          name: nginx-config
       - name: static-content
         emptyDir: {}
 EOF
@@ -166,7 +165,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: fast-ssd-missing  # BROKEN: Non-existent storage class
+  storageClassName: fast-ssd
   resources:
     requests:
       storage: 1Gi
@@ -191,7 +190,7 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: frontend-service-wrong  # BROKEN: Wrong service name
+            name: frontend-service-wrong
             port:
               number: 80
       - path: /api
@@ -252,13 +251,10 @@ EOF
 echo "📝 Creating solution ConfigMaps..."
 
 cat > /root/k8s-app/configmaps/api-config.yaml << 'EOF'
-# Solution: API ConfigMap with nginx configuration
-# Apply this to fix API pods: kubectl apply -f /root/k8s-app/configmaps/api-config.yaml
-# This will create the missing ConfigMap that the API deployment needs
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: api-config-missing
+  name: api-config
   namespace: webapp
 data:
   default.conf: |
@@ -276,12 +272,10 @@ data:
 EOF
 
 cat > /root/k8s-app/configmaps/nginx-config.yaml << 'EOF'
-# Solution: Frontend nginx ConfigMap
-# Apply this to fix frontend pod: kubectl apply -f /root/k8s-app/configmaps/nginx-config.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: nginx-config-missing
+  name: nginx-config
   namespace: webapp
 data:
   default.conf: |

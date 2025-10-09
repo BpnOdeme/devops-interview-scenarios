@@ -7,132 +7,104 @@ Now that you've identified the pod issues, it's time to fix the API pods and net
 ## Current Problems
 
 Multiple issues need to be resolved:
-- **API pods**: CrashLoopBackOff - need working application code
-- **Service selectors**: Don't match pod labels
-- **Missing services**: Frontend and Postgres services don't exist
-- **Endpoints**: Not being created properly due to wrong selectors
+- **API pods**: Not running properly - investigate why
+- **Service endpoints**: Some services have no endpoints
+- **Service communication**: DNS may work but endpoints are missing
 
 ## Tasks
 
-### 1. Fix API Pods First
+### 1. Investigate API Pod Issues
 
-The API pods are in ContainerCreating or CrashLoopBackOff state. Let's investigate:
+The API pods are not running. Find out why:
 
 ```bash
 # Check API pod status
 kubectl get pods -n webapp -l app=api
 
-# Describe the pod to see what's wrong
+# Get detailed information
 kubectl describe pod -l app=api -n webapp
 
-# You'll see: MountVolume.SetUp failed - configmap "api-config-missing" not found
+# Check deployment configuration
+kubectl get deployment api -n webapp -o yaml
+
+# Look for issues in Events section
+kubectl get events -n webapp --field-selector involvedObject.name=api
 ```
 
-The API deployment references a missing ConfigMap. Let's check the deployment and fix it:
+**Common investigation steps:**
+- Is there a missing ConfigMap?
+- Are there volume mount errors?
+- Check what ConfigMaps exist: `kubectl get configmaps -n webapp`
+- Check if there are prepared files in `/root/k8s-app/configmaps/`
+
+**Hint:** Look in `/root/k8s-app/configmaps/` for solution files.
+
+### 2. Fix API Pods
+
+After identifying the issue, fix it:
 
 ```bash
-# Check current deployment
-kubectl get deployment api -n webapp -o yaml | grep -A 5 "volumes:"
+# List available solution files
+ls -la /root/k8s-app/configmaps/
 
-# Look at the broken deployment file
-cat /root/k8s-app/deployments/api-deployment.yaml
-
-# Compare with the solution version
-cat /root/k8s-app/deployments/api-deployment-SOLUTION.yaml
-
-# Or use diff to see differences
-diff /root/k8s-app/deployments/api-deployment.yaml /root/k8s-app/deployments/api-deployment-SOLUTION.yaml
-```
-
-**Issues found:**
-1. ConfigMap `api-config-missing` doesn't exist
-2. Container port is wrong: `80` → should be `3000`
-3. Resources too low: need more memory
-4. Image is old version: should be nginx:alpine (not nginx:1.21)
-
-**Note:** This is a mock API using nginx to return JSON responses. It doesn't connect to actual databases - the focus is on Kubernetes troubleshooting, not application development.
-
-**Fix Option 1 - Create the missing ConfigMap (simplest):**
-```bash
-# Create the missing ConfigMap - this will make pods start
+# Apply the necessary ConfigMap
 kubectl apply -f /root/k8s-app/configmaps/api-config.yaml
 
-# Verify pods are starting
+# Watch pods start
 kubectl get pods -n webapp -l app=api -w
 ```
 
-**Fix Option 2 - Apply the complete solution:**
-```bash
-# Apply both ConfigMap and fixed deployment
-kubectl apply -f /root/k8s-app/configmaps/api-config.yaml
-kubectl apply -f /root/k8s-app/deployments/api-deployment-SOLUTION.yaml
+### 3. Investigate Service Endpoints
 
-# Wait for rollout
-kubectl rollout status deployment/api -n webapp
-```
-
-**Note:** Option 1 is enough to get pods running for Step 2. The deployment still has wrong port (80 instead of 3000) and old image, but pods will be Running and Ready, which is what Step 2 requires.
-
-### 2. Check Service Configuration
-
-Now examine the current services and their endpoints:
+Check why some services have no endpoints:
 
 ```bash
-# List all services in the webapp namespace
-kubectl get svc -n webapp
+# List all services and endpoints
+kubectl get svc,endpoints -n webapp
 
-# Check endpoints for each service
+# Check which services have endpoints
 kubectl get endpoints -n webapp
 
-# Describe services to see selectors
-kubectl describe svc -n webapp
-```
-
-### 3. Fix Service Selectors
-
-The API service has an incorrect selector that doesn't match the pod labels. Let's check and fix it:
-
-```bash
-# Check current service configuration
+# Investigate services without endpoints
 kubectl describe svc api-service -n webapp
 
-# Check what labels the API pods actually have
-kubectl get pods -n webapp -l app=api --show-labels
+# Compare service selector with pod labels
+kubectl get pods -n webapp --show-labels
 ```
 
-**Issue**: The selector is `app: backend` but should be `app: api`
+**Key question:** Do the service selectors match the pod labels?
 
-**Fix Option 1 - Edit the service directly:**
+### 4. Fix Service Selectors
+
+If you find a mismatch between service selectors and pod labels, fix it:
+
 ```bash
+# Option 1: Edit the service
 kubectl edit svc api-service -n webapp
-# Change selector from 'app: backend' to 'app: api'
+
+# Option 2: Patch the service
+kubectl patch svc api-service -n webapp -p '{"spec":{"selector":{"app":"api"}}}'
+
+# Verify endpoints are created
+kubectl get endpoints api-service -n webapp
 ```
 
-**Fix Option 2 - Apply corrected YAML:**
+### 5. Create Missing Services
+
+Check if all required services exist:
+
+```bash
+# List current services
+kubectl get svc -n webapp
+
+# Required services: api-service, frontend-service, postgres-service, redis-cache
+# Create missing ones if needed
+```
+
+If frontend-service doesn't exist:
+
 ```bash
 kubectl apply -f - <<EOF
-apiVersion: v1
-kind: Service
-metadata:
-  name: api-service
-  namespace: webapp
-spec:
-  selector:
-    app: api  # Fixed selector
-  ports:
-  - port: 3000
-    targetPort: 3000
-  type: ClusterIP
-EOF
-```
-
-### 4. Create Missing Services
-
-Some services are missing entirely. Create the frontend service:
-
-```bash
-# Create frontend service
-cat << 'EOF' | kubectl apply -f -
 apiVersion: v1
 kind: Service
 metadata:
@@ -148,15 +120,9 @@ spec:
 EOF
 ```
 
-### 5. Create Database Service
-
-The backend deployment references a database service that doesn't exist yet. Let's create it:
+If postgres-service doesn't exist:
 
 ```bash
-# Check if postgres service exists
-kubectl get svc -n webapp | grep postgres
-
-# Create the postgres service
 kubectl apply -f - <<EOF
 apiVersion: v1
 kind: Service
@@ -175,20 +141,18 @@ EOF
 
 ### 6. Verify Service Communication
 
-Test that services can resolve DNS names correctly and have proper endpoints:
+Test that services can resolve each other:
 
 ```bash
-# Check if services have endpoints
+# Test DNS resolution from API pod
+kubectl exec -it deployment/api -n webapp -- getent hosts postgres-service
+kubectl exec -it deployment/api -n webapp -- getent hosts redis-cache
+
+# Check all endpoints
 kubectl get endpoints -n webapp
 
-# Verify API service now has endpoints
-kubectl describe svc api-service -n webapp
-
-# Test DNS resolution from a running pod (using getent - available in alpine)
-kubectl exec -it deployment/redis -n webapp -- getent hosts api-service
-
-# Verify postgres service (once pod is running)
-kubectl get endpoints postgres-service -n webapp
+# Verify API service has endpoints
+kubectl describe endpoints api-service -n webapp
 ```
 
 ## Expected Results
@@ -212,6 +176,9 @@ kubectl get svc,endpoints -n webapp
 
 # Test DNS resolution from API pod (using getent)
 kubectl exec -it deployment/api -n webapp -- getent hosts postgres-service
+
+# Check API pod logs
+kubectl logs deployment/api -n webapp
 ```
 
 **Next**: Once services can communicate properly, proceed to fix storage and database issues.

@@ -7,9 +7,9 @@ In this step, you'll fix the ingress configuration to enable external access to 
 ## Current Problems
 
 Based on the current setup:
-- Frontend deployment is **ContainerCreating** - references non-existent ConfigMap (`nginx-config-missing`)
-- Frontend service doesn't exist yet
-- No ingress configuration has been created
+- Frontend deployment is **ContainerCreating** - investigate why
+- Frontend service may need verification
+- Ingress configuration needs to be created
 - Ingress controller should already be deployed (Nginx Ingress Controller)
 
 ## Tasks
@@ -19,10 +19,8 @@ Based on the current setup:
 First, verify the ingress controller is running:
 
 ```bash
-
 # Check ingress controller pods
 kubectl get pods -n ingress-nginx
-
 
 # Wait for ingress controller to be ready
 kubectl wait --namespace ingress-nginx \
@@ -31,58 +29,63 @@ kubectl wait --namespace ingress-nginx \
   --timeout=120s
 ```
 
-### 2. Create Missing ConfigMap for Frontend
+### 2. Investigate Frontend Pod Issue
 
-The frontend pod is stuck in ContainerCreating because it references `nginx-config-missing`. Let's investigate and fix:
+The frontend pod is not starting. Investigate why:
 
 ```bash
-# Check what ConfigMap the frontend deployment is looking for
-kubectl describe deployment frontend -n webapp | grep -A 5 "Volumes:"
+# Check frontend pod status
+kubectl get pods -n webapp -l app=frontend
 
-# Check the broken deployment
+# Get detailed information about the pod
 kubectl describe pod -l app=frontend -n webapp
 
-# You'll see: MountVolume.SetUp failed - configmap "nginx-config-missing" not found
+# Look for error messages in the Events section
+# Common issues:
+# - Missing ConfigMap
+# - Image pull errors
+# - Volume mount failures
 ```
 
-**Fix - Apply the prepared ConfigMap:**
+**Hints:**
+- Check what ConfigMap the deployment is trying to mount
+- Verify if that ConfigMap exists: `kubectl get configmaps -n webapp`
+- Check if there's a prepared ConfigMap file in `/root/k8s-app/configmaps/`
+
+### 3. Create Missing Resources
+
+After identifying the issue, create the missing ConfigMap:
 
 ```bash
-# Check the ConfigMap file (already prepared in setup)
+# List available ConfigMap files
+ls -la /root/k8s-app/configmaps/
+
+# Review the ConfigMap content
 cat /root/k8s-app/configmaps/nginx-config.yaml
 
-# Apply it
+# Apply the ConfigMap
 kubectl apply -f /root/k8s-app/configmaps/nginx-config.yaml
 
 # Watch the frontend pod start
 kubectl get pods -n webapp -l app=frontend -w
 ```
 
-### 3. Verify Frontend Pod Status
+### 4. Verify Frontend Pod and Service
 
-After creating the ConfigMap, check if the frontend pod starts:
+After creating the ConfigMap, verify the pod starts:
 
 ```bash
-# Watch the frontend pod status
+# Check pod status
 kubectl get pods -n webapp -l app=frontend
 
-# Once running, check pod logs for nginx startup
+# Check pod logs for nginx startup
 kubectl logs deployment/frontend -n webapp
 
-# Look for successful startup messages:
-# ✅ "start worker process"
-# ✅ nginx successfully started
-# ❌ If you see "config" errors, check ConfigMap content
-
-# Verify the ConfigMap was created
-kubectl get configmap nginx-config-missing -n webapp
-
-# Optional: Verify nginx config inside pod
+# Verify nginx config inside pod (optional)
 kubectl exec -it deployment/frontend -n webapp -- nginx -t
-# Expected: "configuration file /etc/nginx/nginx.conf syntax is ok"
 ```
 
-### 4. Verify Frontend Service
+### 5. Verify Frontend Service
 
 Check if the frontend service exists (should have been created in Step 2):
 
@@ -113,7 +116,7 @@ kubectl get svc,endpoints -n webapp | grep frontend
 # Example: endpoints/frontend-service   192.168.0.11:80
 ```
 
-### 5. Create Ingress Configuration
+### 6. Create Ingress Configuration
 
 Now create an ingress to expose the application externally:
 
@@ -165,7 +168,7 @@ spec:
 EOF
 ```
 
-### 6. Test External Access
+### 7. Test External Access
 
 Get the ingress IP and test access:
 
@@ -187,7 +190,7 @@ curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/
 curl -H "Host: webapp.local" http://$NODE_IP:$INGRESS_PORT/api/health
 ```
 
-### 7. Add Host Entry (if needed)
+### 8. Add Host Entry (if needed)
 
 If testing with domain name:
 
