@@ -40,7 +40,7 @@ spec:
     spec:
       containers:
       - name: postgres
-        image: postgres:13-wrong
+        image: postgres:13-alpine
         ports:
         - containerPort: 5432
         env:
@@ -59,7 +59,7 @@ spec:
       volumes:
       - name: postgres-storage
         persistentVolumeClaim:
-          claimName: postgres-pvc-wrong
+          claimName: postgres-data
 EOF
 
 # Create broken API deployment

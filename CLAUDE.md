@@ -14,7 +14,73 @@
 - Her git commit atmadan önce mutlaka rootdaki CLAUDE.md file güncelle
 - Her commit atıldığında root dizindeki CLAUDE.md file güncelle, md fileları güncelle
 
-## Recent Work - Removed Direct YAML Solutions from Step Guides (2025-10-08)
+## Recent Work - Made Error Names Less Obvious (2025-10-08)
+
+### Changed Obvious Error Indicators to Realistic Values
+
+**User Request:** "postgres-deployment.yaml içerisinde image hatalı olduğu açık ortada wrong yerine başka bir ifade koyalım ilk bakışta düzeltileceği anlaşılmasın pvc claimName de aynı şekilde"
+
+**Problem:** Current naming was too obvious:
+- `postgres:13-wrong` → Screams "I'm broken!"
+- `postgres-pvc-wrong` → Obviously wrong
+
+**Changes Made:**
+
+#### 1. Postgres Image Tag (setup.sh line 43)
+**Before:**
+```yaml
+image: postgres:13-wrong
+```
+
+**After:**
+```yaml
+image: postgres:13-alpine
+```
+
+**Rationale:**
+- Looks like a real tag
+- Not obviously wrong at first glance
+- Will still cause ImagePullBackOff (tag doesn't exist)
+- Users must read error message to understand issue
+
+#### 2. PVC Claim Name (setup.sh line 62)
+**Before:**
+```yaml
+persistentVolumeClaim:
+  claimName: postgres-pvc-wrong
+```
+
+**After:**
+```yaml
+persistentVolumeClaim:
+  claimName: postgres-data
+```
+
+**Rationale:**
+- Logical, descriptive name
+- Looks intentional, not broken
+- Will cause mounting error (PVC doesn't exist)
+- Users must compare with actual PVC name
+
+#### 3. Updated SOLUTION.md References
+- Updated all `postgres:13-wrong` → `postgres:13-alpine`
+- Updated all `postgres-pvc-wrong` → `postgres-data`
+- Maintains accuracy in solution guide
+
+**Files Modified:**
+- setup.sh: Lines 43, 62
+- SOLUTION.md: Lines 113, 121, 162, 168, 392, 426
+
+**Impact:**
+- ❌ No more `-wrong` suffixes giving it away
+- ✅ Errors look like real mistakes
+- ✅ Must investigate error messages
+- ✅ Can't just search for "wrong"
+- ✅ More realistic troubleshooting
+
+---
+
+## Previous Work - Removed Direct YAML Solutions from Step Guides (2025-10-08)
 
 ### Converted Step Instructions to Pattern-Based Learning
 
