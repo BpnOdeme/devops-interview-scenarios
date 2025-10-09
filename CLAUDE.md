@@ -14,7 +14,57 @@
 - Her git commit atmadan önce mutlaka rootdaki CLAUDE.md file güncelle
 - Her commit atıldığında root dizindeki CLAUDE.md file güncelle, md fileları güncelle
 
-## Recent Work - Removed Direct kubectl set image Command (2025-10-08)
+## Recent Work - Removed Redundant verify-step2.sh from /root (2025-10-08)
+
+### Cleaned Up Duplicate Verify Script
+
+**User Request:** "bu scripti o adımı geçemediğimiz için test etmek amaçlı koymuştuk fakat şuan case devops değerlendirmesine hazır bir aşamaya geldi onu tutmamıza gerek yok"
+
+**Problem:**
+- Had two verify scripts: `/usr/local/bin/verify-step2` and `/root/verify-step2.sh`
+- `/root/verify-step2.sh` was for testing, now redundant
+- Other steps don't have verify scripts in /root
+- Inconsistent with rest of scenario
+
+**Changes Made:**
+
+**setup.sh (lines 388-463):**
+- Removed entire `/root/verify-step2.sh` creation block (76 lines)
+- Kept only `/usr/local/bin/verify-step2` (Killercoda's verify mechanism)
+
+**Before:**
+```bash
+chmod +x /usr/local/bin/verify-step2
+
+# Create verify script in scenario root for Killercoda
+cat > /root/verify-step2.sh << 'VERIFY_ROOT_EOF'
+[76 lines of duplicate verify logic]
+VERIFY_ROOT_EOF
+chmod +x /root/verify-step2.sh
+```
+
+**After:**
+```bash
+chmod +x /usr/local/bin/verify-step2
+
+# Create README for troubleshooting guidance
+```
+
+**Rationale:**
+- Killercoda uses `/usr/local/bin/verify-step2` for "Check" button
+- `/root/verify-step2.sh` was just a duplicate for manual testing
+- No other steps have scripts in /root
+- Cleaner `/root` directory for users
+
+**Impact:**
+- ✅ Consistent with other steps
+- ✅ Cleaner user environment
+- ✅ Single source of truth for verification
+- ✅ 76 lines removed from setup.sh
+
+---
+
+## Previous Work - Removed Direct kubectl set image Command (2025-10-08)
 
 ### Changed from Complete Command to Command Pattern
 
