@@ -14,7 +14,119 @@
 - Her git commit atmadan önce mutlaka rootdaki CLAUDE.md file güncelle
 - Her commit atıldığında root dizindeki CLAUDE.md file güncelle, md fileları güncelle
 
-## Recent Work - Removed SOLUTION.yaml Files and Obvious Hints (2025-10-08)
+## Recent Work - Removed Direct YAML Solutions from Step Guides (2025-10-08)
+
+### Converted Step Instructions to Pattern-Based Learning
+
+**User Request:** "step 2 de 4. Fix Service Selectors, 5. Create Missing Services adımlarında bu şekilde açık bilgilerle ilerlemeli miyiz? yoksa sadece nasıl bir servis tanımına ihtiyaç olduğunu şu uygulama şu portta çalışır gibi mi yapalım"
+
+**Decision:** Pattern-based learning - show the pattern, not the complete solution
+
+**Changes Made:**
+
+#### 1. step2.md - Removed Ready-to-Use Service YAMLs
+**Before (too easy):**
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: webapp
+spec:
+  selector:
+    app: frontend
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+EOF
+```
+
+**After (pattern-based):**
+```markdown
+The application architecture requires:
+- API service: exposes port 3000
+- Frontend service: exposes port 80
+- Database service: exposes port 5432
+
+If services are missing, create them with:
+- Correct selector matching pod labels
+- Appropriate port and targetPort
+- type: ClusterIP
+
+Example pattern:
+kubectl create service clusterip <service-name> --tcp=<port>:<targetPort>
+```
+
+#### 2. step3.md - Removed Complete PVC YAML
+**Before:**
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: webapp
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+EOF
+```
+
+**After:**
+```markdown
+Create new PVC with correct storage class
+Use kubectl apply with a PVC manifest that includes:
+- accessModes: ReadWriteOnce
+- storageClassName: <available-storage-class>
+- storage: 1Gi
+
+Hints:
+- Check available storage classes: kubectl get storageclass
+- Common storage classes: local-path, standard, hostpath
+```
+
+#### 3. step3.md - Genericized Environment Variables
+**Before:**
+```bash
+kubectl set env deployment/postgres -n webapp \
+  POSTGRES_USER=webapp_user \
+  POSTGRES_PASSWORD=webapp_pass \
+  POSTGRES_DB=webapp
+```
+
+**After:**
+```bash
+PostgreSQL requires these environment variables:
+- POSTGRES_USER: Database user
+- POSTGRES_PASSWORD: Database password
+- POSTGRES_DB: Database name
+
+kubectl set env deployment/postgres -n webapp \
+  POSTGRES_USER=<user> \
+  POSTGRES_PASSWORD=<password> \
+  POSTGRES_DB=<database-name>
+```
+
+**Files Modified:**
+- step2.md: Tasks 4-5 converted to pattern-based (lines 77-129)
+- step3.md: PVC creation and env vars genericized (lines 73-140)
+
+**Impact:**
+- ❌ No more copy-paste YAML solutions
+- ✅ Learn the pattern and apply it
+- ✅ Understand requirements (ports, selectors, env vars)
+- ✅ Think about what values to use
+- ✅ More realistic DevOps work
+
+---
+
+## Previous Work - Removed SOLUTION.yaml Files and Obvious Hints (2025-10-08)
 
 ### Further Reduced Hint Level for More Realistic Troubleshooting
 

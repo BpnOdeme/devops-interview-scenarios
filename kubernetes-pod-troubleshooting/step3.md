@@ -76,27 +76,20 @@ kubectl get storageclass
 # Check current PVC configuration
 kubectl get pvc postgres-pvc -n webapp -o yaml
 
-# Delete and recreate if wrong storage class
+# If wrong storage class, delete and recreate
 kubectl delete pvc postgres-pvc -n webapp
 
-# Create correct PVC
-kubectl apply -f - <<EOF
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: postgres-pvc
-  namespace: webapp
-spec:
-  accessModes:
-    - ReadWriteOnce
-  storageClassName: local-path  # Use the correct storage class for your cluster
-  resources:
-    requests:
-      storage: 1Gi
-EOF
+# Create new PVC with correct storage class
+# Use kubectl apply with a PVC manifest that includes:
+# - accessModes: ReadWriteOnce
+# - storageClassName: <available-storage-class>
+# - storage: 1Gi
 ```
 
-**Hint:** Check available storage classes with `kubectl get storageclass`
+**Hints:**
+- Check available storage classes: `kubectl get storageclass`
+- Common storage classes: `local-path`, `standard`, `hostpath`
+- PVC must be in same namespace as the pod
 
 ### 4. Fix Postgres Deployment Configuration
 
@@ -117,23 +110,33 @@ kubectl get deployment postgres -n webapp -o yaml | grep -A 5 "volumes:"
 
 1. **Add missing environment variables:**
 ```bash
+# PostgreSQL requires these environment variables:
+# - POSTGRES_USER: Database user
+# - POSTGRES_PASSWORD: Database password
+# - POSTGRES_DB: Database name
+
 kubectl set env deployment/postgres -n webapp \
-  POSTGRES_USER=webapp_user \
-  POSTGRES_PASSWORD=webapp_pass \
-  POSTGRES_DB=webapp
+  POSTGRES_USER=<user> \
+  POSTGRES_PASSWORD=<password> \
+  POSTGRES_DB=<database-name>
 ```
 
 2. **Fix PVC name if wrong:**
 ```bash
 kubectl edit deployment postgres -n webapp
-# Update volumes section to reference correct PVC name
+# In volumes section, update persistentVolumeClaim.claimName
+# Must match the actual PVC name
 ```
 
 3. **Increase resource limits if too low:**
 ```bash
-kubectl set resources deployment postgres -n webapp \
-  --limits=memory=256Mi,cpu=500m \
-  --requests=memory=128Mi,cpu=250m
+# PostgreSQL typically needs:
+# - Memory: at least 128Mi-256Mi
+# - CPU: 250m-500m
+
+kubectl set resources deployment/postgres -n webapp \
+  --limits=memory=<limit>,cpu=<limit> \
+  --requests=memory=<request>,cpu=<request>
 ```
 
 ### 5. Verify Database is Running

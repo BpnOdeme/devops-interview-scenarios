@@ -79,65 +79,54 @@ kubectl get pods -n webapp --show-labels
 If you find a mismatch between service selectors and pod labels, fix it:
 
 ```bash
-# Option 1: Edit the service
-kubectl edit svc api-service -n webapp
+# Option 1: Edit the service interactively
+kubectl edit svc <service-name> -n webapp
+# Update the selector to match pod labels
 
-# Option 2: Patch the service
-kubectl patch svc api-service -n webapp -p '{"spec":{"selector":{"app":"api"}}}'
+# Option 2: Use patch command
+kubectl patch svc <service-name> -n webapp -p '{"spec":{"selector":{"app":"<correct-label>"}}}'
 
-# Verify endpoints are created
-kubectl get endpoints api-service -n webapp
+# Verify endpoints are created after fix
+kubectl get endpoints <service-name> -n webapp
 ```
 
-### 5. Create Missing Services
+**Hint:** Compare service selector with actual pod labels using `kubectl get pods --show-labels`
 
-Check if all required services exist:
+### 5. Verify All Required Services Exist
+
+The application architecture requires these services:
 
 ```bash
 # List current services
 kubectl get svc -n webapp
 
-# Required services: api-service, frontend-service, postgres-service, redis-cache
-# Create missing ones if needed
+# Required services and their ports:
+# - API service: exposes port 3000 (for API pods)
+# - Frontend service: exposes port 80 (for nginx frontend)
+# - Database service: exposes port 5432 (for PostgreSQL)
+# - Redis cache: already exists ✅
 ```
 
-If frontend-service doesn't exist:
+**If services are missing, create them with:**
+- Correct `selector` matching pod labels
+- Appropriate `port` and `targetPort`
+- `type: ClusterIP` for internal communication
 
+**Example service creation pattern:**
 ```bash
-kubectl apply -f - <<EOF
-apiVersion: v1
-kind: Service
-metadata:
-  name: frontend-service
-  namespace: webapp
-spec:
-  selector:
-    app: frontend
-  ports:
-  - port: 80
-    targetPort: 80
-  type: ClusterIP
-EOF
+kubectl create service clusterip <service-name> \
+  --tcp=<port>:<targetPort> \
+  -n webapp
+
+# Then edit to add correct selector
+kubectl edit svc <service-name> -n webapp
 ```
 
-If postgres-service doesn't exist:
-
-```bash
-kubectl apply -f - <<EOF
-apiVersion: v1
-kind: Service
-metadata:
-  name: postgres-service
-  namespace: webapp
-spec:
-  selector:
-    app: postgres
-  ports:
-  - port: 5432
-    targetPort: 5432
-  type: ClusterIP
-EOF
-```
+**Or use kubectl apply with YAML** - define Service with:
+- `metadata.name`: Service name
+- `spec.selector`: Must match pod labels
+- `spec.ports`: Port mapping
+- `spec.type`: ClusterIP
 
 ### 6. Verify Service Communication
 
