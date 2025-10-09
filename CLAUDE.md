@@ -14,7 +14,58 @@
 - Her git commit atmadan önce mutlaka rootdaki CLAUDE.md file güncelle
 - Her commit atıldığında root dizindeki CLAUDE.md file güncelle, md fileları güncelle
 
-## Recent Work - Made Error Names Less Obvious (2025-10-08)
+## Recent Work - Removed Direct kubectl set image Command (2025-10-08)
+
+### Changed from Complete Command to Command Pattern
+
+**User Request:** "kubectl set image deployment/postgres postgres=postgres:15 -n webapp bu komutu bizim vermemiz mantıklı mı? bu bilinmesi gerekmez mi?"
+
+**Problem:** Giving exact command is too easy - just copy-paste the solution
+
+**Changes Made:**
+
+#### step3.md Task 2 - Fix Image Issues (lines 33-55)
+**Before (direct solution):**
+```bash
+# Fix the deployment
+kubectl set image deployment/postgres postgres=postgres:15 -n webapp
+
+# Or edit directly
+kubectl edit deployment postgres -n webapp
+```
+
+**After (pattern-based):**
+```bash
+# Fix using one of these methods:
+
+# Option 1: Edit deployment interactively
+kubectl edit deployment postgres -n webapp
+# Find spec.template.spec.containers[].image and update to valid tag
+
+# Option 2: Use set image command
+# Syntax: kubectl set image deployment/<name> <container-name>=<new-image> -n <namespace>
+# Check container name: kubectl get deployment postgres -n webapp -o jsonpath='{.spec.template.spec.containers[0].name}'
+
+Hint: Verify image tags on Docker Hub before applying
+```
+
+**Rationale:**
+- `kubectl set image` is a basic kubectl command users should know
+- But giving exact syntax with all values is too easy
+- Show the command pattern/syntax instead
+- Users must fill in: deployment name, container name, image tag
+- Forces understanding of command structure
+
+**Impact:**
+- ❌ No more copy-paste exact commands
+- ✅ Learn kubectl command syntax
+- ✅ Understand what each parameter means
+- ✅ Apply pattern to other scenarios
+- ✅ Verify image availability before deploying
+
+---
+
+## Previous Work - Made Error Names Less Obvious (2025-10-08)
 
 ### Changed Obvious Error Indicators to Realistic Values
 

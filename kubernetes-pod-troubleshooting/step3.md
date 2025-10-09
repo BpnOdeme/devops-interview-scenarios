@@ -38,17 +38,21 @@ If you see ImagePullBackOff:
 # Check current image
 kubectl get deployment postgres -n webapp -o jsonpath='{.spec.template.spec.containers[0].image}'
 
-# Common postgres images:
-# - postgres:13
-# - postgres:14
-# - postgres:15
+# Verify the image tag exists on Docker Hub or use docker pull to test
+# Common valid postgres tags: postgres:15, postgres:14, postgres:13
 
-# Fix the deployment
-kubectl set image deployment/postgres postgres=postgres:15 -n webapp
+# Fix using one of these methods:
 
-# Or edit directly
+# Option 1: Edit deployment interactively
 kubectl edit deployment postgres -n webapp
+# Find spec.template.spec.containers[].image and update to valid tag
+
+# Option 2: Use set image command
+# Syntax: kubectl set image deployment/<name> <container-name>=<new-image> -n <namespace>
+# Check container name: kubectl get deployment postgres -n webapp -o jsonpath='{.spec.template.spec.containers[0].name}'
 ```
+
+**Hint:** You can verify image tags exist before applying by checking Docker Hub or using `docker pull <image:tag>`
 
 ### 3. Investigate Storage Issues
 
