@@ -297,109 +297,7 @@ data:
     }
 EOF
 
-# Create solution PVC file
-cat > /root/k8s-app/storage/postgres-pvc-SOLUTION.yaml << 'EOF'
-# Solution: Fixed PVC with correct storage class
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: postgres-pvc
-  namespace: webapp
-spec:
-  accessModes:
-    - ReadWriteOnce
-  storageClassName: local-path  # Fixed: Use available storage class
-  resources:
-    requests:
-      storage: 1Gi
-EOF
-
-# Create solution postgres deployment file
-cat > /root/k8s-app/deployments/postgres-deployment-SOLUTION.yaml << 'EOF'
-# Solution: Fixed PostgreSQL deployment
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: postgres
-  namespace: webapp
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: postgres
-  template:
-    metadata:
-      labels:
-        app: postgres
-    spec:
-      containers:
-      - name: postgres
-        image: postgres:13  # Fixed: Correct image tag
-        ports:
-        - containerPort: 5432
-        env:
-        - name: POSTGRES_DB
-          value: webapp
-        - name: POSTGRES_USER  # Fixed: Added user
-          value: webapp_user
-        - name: POSTGRES_PASSWORD  # Fixed: Added password
-          value: webapp_password
-        - name: PGDATA
-          value: /var/lib/postgresql/data/pgdata
-        resources:
-          requests:
-            memory: "256Mi"  # Fixed: Increased memory
-            cpu: "250m"
-          limits:
-            memory: "512Mi"  # Fixed: Increased memory
-            cpu: "500m"
-        volumeMounts:
-        - name: postgres-storage
-          mountPath: /var/lib/postgresql/data
-      volumes:
-      - name: postgres-storage
-        persistentVolumeClaim:
-          claimName: postgres-pvc
-EOF
-
-# Create solution deployment file
-cat > /root/k8s-app/deployments/api-deployment-SOLUTION.yaml << 'EOF'
-# Solution: Fixed API deployment
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: api
-  namespace: webapp
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: api
-  template:
-    metadata:
-      labels:
-        app: api
-    spec:
-      containers:
-      - name: api
-        image: nginx:alpine
-        ports:
-        - containerPort: 3000
-        volumeMounts:
-        - name: api-config
-          mountPath: /etc/nginx/conf.d
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
-      volumes:
-      - name: api-config
-        configMap:
-          name: api-config-missing
-EOF
+# Note: Solution files removed - users should investigate and fix using kubectl commands
 
 # Apply all broken manifests
 echo "🔥 Applying broken configurations from files..."
@@ -576,36 +474,28 @@ This lab contains intentionally broken Kubernetes configurations for troubleshoo
 k8s-app/
 ├── README.md
 ├── deployments/
-│   ├── api-deployment.yaml (BROKEN)
-│   ├── api-deployment-SOLUTION.yaml
-│   ├── frontend-deployment.yaml (BROKEN)
-│   ├── postgres-deployment.yaml (BROKEN)
-│   ├── postgres-deployment-SOLUTION.yaml
-│   └── redis-deployment.yaml (working)
+│   ├── api-deployment.yaml
+│   ├── frontend-deployment.yaml
+│   ├── postgres-deployment.yaml
+│   └── redis-deployment.yaml
 ├── services/
-│   └── api-service.yaml (BROKEN - wrong selector)
+│   └── api-service.yaml
 ├── storage/
-│   ├── postgres-pvc.yaml (BROKEN - wrong storageClassName)
-│   └── postgres-pvc-SOLUTION.yaml
+│   └── postgres-pvc.yaml
 ├── ingress/
-│   └── webapp-ingress.yaml (BROKEN)
+│   └── webapp-ingress.yaml
 └── configmaps/
-    ├── api-config.yaml (SOLUTION)
-    └── nginx-config.yaml (SOLUTION)
+    ├── api-config.yaml (for Step 2)
+    └── nginx-config.yaml (for Step 4)
 ```
 
-## Solution Files
-Use `*-SOLUTION.yaml` files for reference:
-- `diff deployments/postgres-deployment{,-SOLUTION}.yaml`
-- `diff storage/postgres-pvc{,-SOLUTION}.yaml`
-
-## Known Issues to Fix
-1. **PostgreSQL**: Wrong image tag, missing env vars, low resources, missing PVC
-2. **API**: Missing ConfigMap, wrong container port, low resource limits, old image
-3. **Frontend**: Missing ConfigMap references
-4. **Services**: Wrong selectors, missing services
-5. **Storage**: Non-existent storage classes
-6. **Ingress**: Wrong service references
+## Your Mission
+Investigate and fix issues with:
+1. **Pods**: Multiple pods not running - use kubectl describe to find why
+2. **Services**: Check if endpoints are being created properly
+3. **Storage**: Verify PVC and storage class configuration
+4. **ConfigMaps**: Some pods may need configuration files
+5. **Ingress**: External access configuration
 
 ## Note About API
 The API is a mock service using nginx to return JSON responses (not a real backend app).

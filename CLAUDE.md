@@ -14,7 +14,88 @@
 - Her git commit atmadan önce mutlaka rootdaki CLAUDE.md file güncelle
 - Her commit atıldığında root dizindeki CLAUDE.md file güncelle, md fileları güncelle
 
-## Recent Work - Converted to Medium Difficulty (Interview Level) (2025-10-08)
+## Recent Work - Removed SOLUTION.yaml Files and Obvious Hints (2025-10-08)
+
+### Further Reduced Hint Level for More Realistic Troubleshooting
+
+**User Request:** "SOLUTION.yaml dosyaları da hala bulunmakta ve Step1 Expected Findings kısmı öyle mi kalsın?"
+
+**Changes Made:**
+
+#### 1. Removed All SOLUTION.yaml File Generation
+**Before:**
+```bash
+# setup.sh created these files:
+- postgres-pvc-SOLUTION.yaml
+- postgres-deployment-SOLUTION.yaml
+- api-deployment-SOLUTION.yaml
+```
+
+**After:**
+```bash
+# Only ConfigMaps remain (needed for pod startup):
+- api-config.yaml (needed in Step 2)
+- nginx-config.yaml (needed in Step 4)
+```
+
+**Rationale:** SOLUTION.yaml files with comments like "# Fixed: Added user" gave away the answers. Users should fix issues using `kubectl edit` or `kubectl set` commands.
+
+#### 2. Updated step1.md Expected Findings to Remove Specifics
+**Before (too detailed):**
+```markdown
+Expected Findings:
+- Frontend pod: ContainerCreating - references non-existent ConfigMap (nginx-config-missing)
+- Postgres pod: Pending - wrong image tag (postgres:13-wrong) and missing PVC
+- API pods: ContainerCreating - missing ConfigMap (api-config-missing) and wrong port
+```
+
+**After (investigation-focused):**
+```markdown
+Expected Findings:
+After investigation, you should identify:
+- Multiple pods are not in Running state
+- Various error states (ContainerCreating, ImagePullBackOff, Pending)
+- One pod (Redis) is healthy - use it as a reference
+- Issues may be related to:
+  - Missing resources (ConfigMaps, PVCs)
+  - Wrong image tags
+  - Configuration errors
+```
+
+**Rationale:** Don't tell them what's wrong - make them use `kubectl describe` and read error messages!
+
+#### 3. Updated setup.sh README Section
+**Before:**
+```markdown
+## Known Issues to Fix
+1. PostgreSQL: Wrong image tag, missing env vars, low resources, missing PVC
+2. API: Missing ConfigMap, wrong container port, low resource limits, old image
+```
+
+**After:**
+```markdown
+## Your Mission
+Investigate and fix issues with:
+1. Pods: Multiple pods not running - use kubectl describe to find why
+2. Services: Check if endpoints are being created properly
+3. Storage: Verify PVC and storage class configuration
+```
+
+**Files Modified:**
+- setup.sh: Removed SOLUTION.yaml generation (lines 300-402 → single comment)
+- setup.sh: Updated README section to be less specific
+- step1.md: Made Expected Findings generic (lines 58-69)
+
+**Impact:**
+- ❌ No more ready-to-apply SOLUTION files
+- ❌ No more "here's exactly what's broken" lists
+- ✅ Must investigate with kubectl commands
+- ✅ Must read error messages and understand them
+- ✅ More realistic troubleshooting experience
+
+---
+
+## Previous Work - Converted to Medium Difficulty (Interview Level) (2025-10-08)
 
 ### Removed Obvious Hints for Real DevOps Troubleshooting Experience
 

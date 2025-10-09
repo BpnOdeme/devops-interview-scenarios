@@ -50,19 +50,24 @@ kubectl logs <pod-name> -n webapp
 Based on the pod descriptions and events, identify these common issues:
 
 - **ContainerCreating**: Missing ConfigMaps, Secrets, or PersistentVolumeClaims
-- **Pending**: Missing storage resources, scheduling constraints, or image pull issues
-- **ImagePullBackOff**: Wrong image names or tags (check carefully for typos like `postgres:13-wrong`)
+- **Pending**: Missing storage resources, scheduling constraints, or resource constraints
+- **ImagePullBackOff**: Wrong image names or tags
 - **CrashLoopBackOff**: Application errors or missing dependencies inside containers
 - **CreateContainerConfigError**: Referenced ConfigMap or Secret doesn't exist
 
 ## Expected Findings
 
-You should discover several issues:
-- **Frontend pod**: ContainerCreating state - references non-existent ConfigMap (`nginx-config-missing`)
-- **Postgres pod**: Pending state - wrong image tag (`postgres:13-wrong`) and missing PersistentVolumeClaim
-- **API pods**: ContainerCreating or CrashLoopBackOff - missing ConfigMap (`api-config-missing`) and wrong container port
-- **Redis pod**: Running successfully (this is the healthy reference)
-- **Resource limits**: Several pods have insufficient memory allocations
+After investigation, you should identify:
+- Multiple pods are not in Running state
+- Various error states (ContainerCreating, ImagePullBackOff, Pending)
+- One pod (Redis) is healthy - use it as a reference
+- Issues may be related to:
+  - Missing resources (ConfigMaps, PVCs)
+  - Wrong image tags
+  - Configuration errors
+  - Resource constraints
+
+**Tip:** Use `kubectl describe pod` and `kubectl get events` to understand what's preventing pods from starting.
 
 ## Verification
 
