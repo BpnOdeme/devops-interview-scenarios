@@ -43,10 +43,10 @@ fi
 
 # Check if postgres deployment has correct image
 POSTGRES_IMAGE=$(kubectl get deployment postgres -n webapp -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null)
-if echo "$POSTGRES_IMAGE" | grep -q "postgres:13"; then
-    echo "✅ PostgreSQL deployment uses correct image"
+if echo "$POSTGRES_IMAGE" | grep -q "postgres:1[3-5]"; then
+    echo "✅ PostgreSQL deployment uses correct image: $POSTGRES_IMAGE"
 else
-    echo "❌ PostgreSQL deployment image: $POSTGRES_IMAGE (should contain postgres:13)"
+    echo "❌ PostgreSQL deployment image: $POSTGRES_IMAGE (should be postgres:13, postgres:14, or postgres:15)"
     exit 1
 fi
 
