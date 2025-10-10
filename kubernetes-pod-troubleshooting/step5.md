@@ -56,10 +56,11 @@ kubectl get events -n webapp --field-selector reason=FailedScheduling
 Perform end-to-end testing of the complete application:
 
 ```bash
-# Test all components are running
+# Test all components are running (in webapp namespace)
 kubectl get all -n webapp
 
 # Get ingress NodePort
+# Note: Ingress resource is in webapp namespace, but controller service is in ingress-nginx namespace
 INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
 echo "Ingress NodePort: $INGRESS_PORT"
 
@@ -196,6 +197,7 @@ kubectl get pods -n webapp -o wide
 kubectl get endpoints -n webapp
 
 # Get ingress access details for testing
+# Note: Ingress controller service is in ingress-nginx namespace (not webapp)
 INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
 echo "Ingress NodePort: $INGRESS_PORT"
 
@@ -241,6 +243,7 @@ echo -e "\nPersistent Volumes:"
 kubectl get pvc -n webapp
 
 echo -e "\nApplication Test:"
+# Note: Ingress controller service is in ingress-nginx namespace
 INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
 curl -H "Host: webapp.local" http://localhost:$INGRESS_PORT/api/health
 

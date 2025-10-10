@@ -20,6 +20,19 @@ echo "📁 Setting up GitOps directory structure..."
 mkdir -p /root/k8s-app/{deployments,services,storage,ingress,configmaps}
 kubectl create namespace webapp
 
+# Install Nginx Ingress Controller
+echo "🌐 Installing Nginx Ingress Controller..."
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.1/deploy/static/provider/baremetal/deploy.yaml
+
+# Wait for ingress controller to be ready
+echo "⏳ Waiting for ingress controller to be ready..."
+kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=120s
+
+echo "✅ Ingress controller is ready!"
+
 # Create broken PostgreSQL deployment
 echo "💣 Creating broken PostgreSQL deployment..."
 cat > /root/k8s-app/deployments/postgres-deployment.yaml << 'EOF'

@@ -16,18 +16,26 @@ Based on the current setup:
 
 ### 1. Check Ingress Controller Status
 
-First, verify the ingress controller is running:
+First, verify the ingress controller is running (installed during setup):
 
 ```bash
 # Check ingress controller pods
 kubectl get pods -n ingress-nginx
 
-# Wait for ingress controller to be ready
+# Check ingress controller service and NodePort
+kubectl get svc -n ingress-nginx ingress-nginx-controller
+
+# If not ready, wait for it
 kubectl wait --namespace ingress-nginx \
   --for=condition=ready pod \
   --selector=app.kubernetes.io/component=controller \
   --timeout=120s
 ```
+
+**Expected Output:**
+- Controller pod should be `Running` and `Ready`
+- Service `ingress-nginx-controller` should exist with type `NodePort`
+- Note the NodePort for HTTP (typically 30000-32767)
 
 ### 2. Investigate Frontend Pod Issue
 
@@ -159,10 +167,11 @@ EOF
 Get the ingress IP and test access:
 
 ```bash
-# Get ingress status
+# Get ingress status (ingress resource is in webapp namespace)
 kubectl get ingress webapp-ingress -n webapp
 
 # Get the ingress NodePort
+# Note: Ingress controller service is in ingress-nginx namespace (different from webapp)
 INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
 echo "Ingress NodePort: $INGRESS_PORT"
 
@@ -196,10 +205,11 @@ After completing this step:
 # Check all pods are running
 kubectl get pods -n webapp
 
-# Test ingress routing
+# Test ingress routing (ingress resource is in webapp namespace)
 kubectl get ingress -n webapp
 
 # Get NodePort and test
+# Note: Ingress controller service is in ingress-nginx namespace
 INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
 curl -H "Host: webapp.local" http://localhost:$INGRESS_PORT/
 

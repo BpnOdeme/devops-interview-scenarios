@@ -115,14 +115,14 @@ kubectl get deployment postgres -n webapp -o yaml | grep -A 5 "volumes:"
 1. **Add missing environment variables:**
 ```bash
 # PostgreSQL requires these environment variables:
-# - POSTGRES_USER: Database user
+# - POSTGRES_USER: Database user (use: webapp_user)
 # - POSTGRES_PASSWORD: Database password
-# - POSTGRES_DB: Database name
+# - POSTGRES_DB: Database name (already set: webapp)
 
 kubectl set env deployment/postgres -n webapp \
-  POSTGRES_USER=<user> \
+  POSTGRES_USER=webapp_user \
   POSTGRES_PASSWORD=<password> \
-  POSTGRES_DB=<database-name>
+  POSTGRES_DB=webapp
 ```
 
 2. **Fix PVC name if wrong:**
