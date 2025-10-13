@@ -193,26 +193,27 @@ metadata:
   name: webapp-ingress
   namespace: webapp
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:
   rules:
   - host: webapp.local
     http:
       paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: frontend-service-wrong
-            port:
-              number: 80
-      - path: /api
-        pathType: Prefix
+      - path: /api(/|$)(.*)
+        pathType: ImplementationSpecific
         backend:
           service:
             name: api-service
             port:
               number: 3000
+      - path: /()(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: frontend-service-wrong
+            port:
+              number: 80
 EOF
 
 # Create working Redis (for comparison)

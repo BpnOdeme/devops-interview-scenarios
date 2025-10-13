@@ -92,22 +92,23 @@ metadata:
   name: webapp-ingress
   namespace: webapp
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /\$2
 spec:
   ingressClassName: nginx
   rules:
   - host: webapp.local
     http:
       paths:
-      - path: /api
-        pathType: Prefix
+      - path: /api(/|$)(.*)
+        pathType: ImplementationSpecific
         backend:
           service:
             name: api-service
             port:
               number: 3000
-      - path: /
-        pathType: Prefix
+      - path: /()(.*)
+        pathType: ImplementationSpecific
         backend:
           service:
             name: frontend-service
@@ -116,7 +117,22 @@ spec:
 EOF
 
 echo "✅ Step 4 completed"
-sleep 5
+sleep 3
+
+# Step 5: Fix API Configuration
+echo ""
+echo "⚙️  Step 5: Fixing API Container Port and Resources..."
+
+# Fix API container port (80 → 3000)
+kubectl patch deployment api -n webapp --type='json' -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/ports/0/containerPort", "value":3000}]'
+
+# Increase API memory limits (64Mi → 128Mi)
+kubectl set resources deployment api -n webapp \
+    --limits=memory=128Mi,cpu=200m \
+    --requests=memory=64Mi,cpu=100m
+
+echo "✅ Step 5 completed"
+sleep 3
 
 # Final Status
 echo ""

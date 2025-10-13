@@ -33,7 +33,61 @@ kubectl get endpoints -n webapp
 kubectl get ingress -n webapp
 ```
 
-### 2. Monitor Resource Usage
+### 2. Fix API Container Port and Resource Limits
+
+**Problem Investigation:**
+The API pods are running but health checks might be failing. Investigate the configuration:
+
+```bash
+# Check API deployment configuration
+kubectl get deployment api -n webapp -o yaml | grep -A 10 "containers:"
+
+# Check what port the API is configured to use
+kubectl get configmap api-config -n webapp -o yaml
+
+# Check current resource limits
+kubectl get deployment api -n webapp -o jsonpath='{.spec.template.spec.containers[0].resources}'
+```
+
+**Issues to Fix:**
+
+#### Issue 1: Container Port Mismatch
+The API deployment has `containerPort: 80` but the ConfigMap configures nginx to listen on port **3000**.
+
+**Fix the container port:**
+```bash
+# Option 1: Edit deployment directly
+kubectl edit deployment api -n webapp
+# Find "containerPort: 80" and change to "containerPort: 3000"
+
+# Option 2: Use kubectl patch
+kubectl patch deployment api -n webapp --type='json' -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/ports/0/containerPort", "value":3000}]'
+```
+
+#### Issue 2: Memory Limits Too Low
+The API deployment has only `64Mi` memory, which is too low for a web service.
+
+**Increase memory limits:**
+```bash
+# Increase memory to 128Mi
+kubectl set resources deployment api -n webapp \
+  --limits=memory=128Mi,cpu=200m \
+  --requests=memory=64Mi,cpu=100m
+
+# Verify the change
+kubectl get deployment api -n webapp -o jsonpath='{.spec.template.spec.containers[0].resources}'
+```
+
+**Wait for pods to restart:**
+```bash
+# Watch pod restart with new configuration
+kubectl rollout status deployment/api -n webapp
+
+# Verify new pods are running
+kubectl get pods -n webapp -l app=api
+```
+
+### 3. Monitor Resource Usage
 
 Check if pods have sufficient resources:
 
@@ -51,7 +105,7 @@ kubectl describe pods -n webapp | grep -A 5 -B 5 "Requests\|Limits"
 kubectl get events -n webapp --field-selector reason=FailedScheduling
 ```
 
-### 3. Test Complete Application Stack
+### 4. Test Complete Application Stack
 
 Perform end-to-end testing of the complete application:
 
@@ -86,7 +140,7 @@ kubectl exec -it deployment/redis -n webapp -- redis-cli ping
 # Note: API is a mock service (nginx), it doesn't actually connect to postgres or redis
 ```
 
-### 4. Analyze Pod Logs for Troubleshooting
+### 5. Analyze Pod Logs for Troubleshooting
 
 **Important DevOps Skill**: Always check logs to verify applications are working correctly!
 
@@ -162,7 +216,7 @@ kubectl get events -n webapp --sort-by='.lastTimestamp' | tail -20
 # ❌ "FailedScheduling"
 ```
 
-### 5. Verify Database and Cache Connectivity
+### 6. Verify Database and Cache Connectivity
 
 Test that database and cache are accessible:
 
@@ -187,7 +241,7 @@ kubectl exec -it deployment/redis -n webapp -- redis-cli GET test
 # Expected: "hello"
 ```
 
-### 6. Final Health Check
+### 7. Final Health Check
 
 ```bash
 # Check pod readiness and liveness

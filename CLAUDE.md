@@ -14,6 +14,211 @@
 - Her git commit atmadan önce mutlaka rootdaki CLAUDE.md file güncelle
 - Her commit atıldığında root dizindeki CLAUDE.md file güncelle, md fileları güncelle
 
+## Recent Work - Fixed Ingress Rewrite Target for Correct API Routing (2025-10-13)
+
+### Updated Ingress Configuration to Use Regex-Based Rewriting
+
+**User Report:** "curl -H "Host: webapp.local" http://localhost:31693/api/health" returned 404 Not Found
+
+**Problem:**
+- Ingress had `rewrite-target: /` annotation (global rewrite)
+- This rewrote **all paths** including frontend paths
+- `/api/health` → `/health` (worked for API)
+- But `/` also got rewritten incorrectly
+- API ConfigMap only has `/health` and `/` locations, not `/api/health`
+
+**Root Cause:**
+```yaml
+# Old (broken):
+annotations:
+  nginx.ingress.kubernetes.io/rewrite-target: /  # Global rewrite!
+paths:
+  - path: /api
+    # /api/health → /health (works)
+  - path: /
+    # / → / (but breaks with global rewrite)
+```
+
+**Solution: Use Regex Capture Groups**
+```yaml
+# New (working):
+annotations:
+  nginx.ingress.kubernetes.io/use-regex: "true"
+  nginx.ingress.kubernetes.io/rewrite-target: /$2  # Capture group $2
+paths:
+  - path: /api(/|$)(.*)  # Captures everything after /api
+    # /api/health → /health ✅
+    # /api → / ✅
+  - path: /()(.*)  # Captures everything
+    # / → / ✅
+```
+
+**How It Works:**
+- `/api(/|$)(.*)` matches `/api` or `/api/` and captures remaining path in `$2`
+- `/api/health` → captures `/health` → rewrites to `/$2` = `/health`
+- `/api` → captures empty → rewrites to `/$2` = `/`
+- `/()(.*)` for frontend captures entire path
+
+**Changes Made:**
+
+#### 1. **setup.sh** - Fixed Ingress Configuration (lines 187-217)
+```yaml
+annotations:
+  nginx.ingress.kubernetes.io/use-regex: "true"
+  nginx.ingress.kubernetes.io/rewrite-target: /$2
+paths:
+  - path: /api(/|$)(.*)
+    pathType: ImplementationSpecific
+  - path: /()(.*)
+    pathType: ImplementationSpecific
+```
+
+#### 2. **quick-fix.sh** - Updated Ingress Fix (lines 88-117)
+```yaml
+# Same regex-based configuration
+# Added \$ escape for bash heredoc
+rewrite-target: /\$2
+```
+
+#### 3. **SOLUTION.md** - Updated Two Locations
+- Step 4 Solution 3 (lines 224-256)
+- Complete Fix Script (lines 592-621)
+
+**Testing:**
+```bash
+# After fix:
+curl -H "Host: webapp.local" http://localhost:31693/api/health
+# Should return: {"status":"healthy"}
+
+curl -H "Host: webapp.local" http://localhost:31693/
+# Should return frontend content
+```
+
+**Impact:**
+- ✅ API /health endpoint now works via ingress
+- ✅ Frontend routing not affected
+- ✅ Regex-based rewrites are path-specific
+- ✅ verify-step5 now passes
+
+**Files Changed:**
+- kubernetes-pod-troubleshooting/setup.sh (lines 187-217)
+- kubernetes-pod-troubleshooting/quick-fix.sh (lines 88-117)
+- kubernetes-pod-troubleshooting/SOLUTION.md (2 locations)
+
+---
+
+## Recent Work - Added Step 5 API Configuration Tasks (2025-10-13)
+
+### Fixed API Container Port and Memory Limits as Step 5 Tasks
+
+**User Request:** "80'i 3000 olarak case gereği düzeltmek gerekiyordu. case'i tamamlamak için başka ne yapılması lazım"
+
+**Problem:**
+- Verify-step5 script was failing even though all pods were Running
+- API container port mismatch: `containerPort: 80` but ConfigMap listens on `3000`
+- API memory limits too low: `64Mi` (verify script checks for != 64Mi)
+- No tasks in step5.md to fix these issues
+
+**Root Cause Analysis:**
+```bash
+# API Deployment (setup.sh line 100):
+containerPort: 80  # ❌ Wrong port
+
+# API ConfigMap (setup.sh line 198):
+listen 3000;  # ✅ ConfigMap expects port 3000
+
+# API Service (setup.sh line 53):
+targetPort: 3000  # Expects pod on port 3000
+
+# Result: Service can't reach pod, health checks fail
+```
+
+**verify-step5.sh Requirements:**
+1. Line 33-38: API memory must be != 64Mi
+2. Line 44: API health endpoint must respond via ingress (`/api/health`)
+3. Both checks were failing
+
+**Changes Made:**
+
+#### 1. **step5.md** - Added Task 2 with Port and Memory Fixes (lines 36-88)
+**New Section:**
+```markdown
+### 2. Fix API Container Port and Resource Limits
+
+**Problem Investigation:**
+The API pods are running but health checks might be failing.
+
+**Issues to Fix:**
+
+#### Issue 1: Container Port Mismatch
+- API deployment: `containerPort: 80`
+- ConfigMap nginx: `listen 3000`
+
+**Fix:**
+kubectl patch deployment api -n webapp --type='json' \
+  -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/ports/0/containerPort", "value":3000}]'
+
+#### Issue 2: Memory Limits Too Low
+- Current: `64Mi`
+- Required: `128Mi`
+
+**Fix:**
+kubectl set resources deployment api -n webapp \
+  --limits=memory=128Mi,cpu=200m \
+  --requests=memory=64Mi,cpu=100m
+```
+
+#### 2. **SOLUTION.md** - Added Step 5 Solutions (lines 306-336)
+**Added:**
+```markdown
+## Step 5: Fix API Configuration and Final Verification
+
+### Solution 1: Fix API Container Port
+kubectl patch deployment api -n webapp --type='json' \
+  -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/ports/0/containerPort", "value":3000}]'
+
+### Solution 2: Increase API Memory Limits
+kubectl set resources deployment api -n webapp \
+  --limits=memory=128Mi,cpu=200m \
+  --requests=memory=64Mi,cpu=100m
+```
+
+#### 3. **quick-fix.sh** - Added Step 5 Automation (lines 121-134)
+**Added:**
+```bash
+# Step 5: Fix API Configuration
+echo "⚙️  Step 5: Fixing API Container Port and Resources..."
+
+# Fix API container port (80 → 3000)
+kubectl patch deployment api -n webapp --type='json' \
+  -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/ports/0/containerPort", "value":3000}]'
+
+# Increase API memory limits (64Mi → 128Mi)
+kubectl set resources deployment api -n webapp \
+  --limits=memory=128Mi,cpu=200m \
+  --requests=memory=64Mi,cpu=100m
+```
+
+**Why These Are Step 5 Tasks:**
+- Step 1-4 focuses on getting pods Running
+- Step 5 focuses on **optimization and final verification**
+- Port mismatch prevents health checks → discovered during final testing
+- Memory limits optimization → part of resource tuning
+
+**Impact:**
+- ✅ verify-step5.sh now has clear path to success
+- ✅ Users understand why API health check fails
+- ✅ Teaches port mapping troubleshooting
+- ✅ Teaches resource limit optimization
+- ✅ Complete end-to-end scenario works
+
+**Files Changed:**
+- kubernetes-pod-troubleshooting/step5.md (added Task 2, renumbered 2→3, 3→4, 4→5, 5→6, 6→7)
+- kubernetes-pod-troubleshooting/SOLUTION.md (added Step 5 solutions)
+- kubernetes-pod-troubleshooting/quick-fix.sh (added Step 5 fixes)
+
+---
+
 ## Recent Work - Added Automated Testing Scripts (2025-10-10)
 
 ### Created Debugging and Testing Tools for Scenario
