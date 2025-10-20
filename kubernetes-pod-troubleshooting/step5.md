@@ -140,6 +140,75 @@ kubectl exec -it deployment/redis -n webapp -- redis-cli ping
 # Note: API is a mock service (nginx), it doesn't actually connect to postgres or redis
 ```
 
+#### Troubleshooting: If Ingress Returns 404
+
+If curl to ingress returns 404 even though all pods are Running and services have endpoints:
+
+**Step 1: Verify Service Access Works**
+```bash
+# Test API directly via service (should work)
+kubectl run test-pod --image=curlimages/curl:latest --rm -it --restart=Never -n webapp -- curl -s http://api-service:3000/health
+
+# Test API from within API pod (should work)
+kubectl exec -it deployment/api -n webapp -- curl -s localhost:3000/health
+
+# If both work but ingress returns 404, the issue is with ingress configuration
+```
+
+**Step 2: Check Ingress Controller Logs**
+```bash
+# Check if ingress controller is processing your ingress
+kubectl logs -n ingress-nginx -l app.kubernetes.io/component=controller --tail=30
+
+# Look for warnings like:
+# - "ignoring ingress"
+# - "IngressClass"
+# - "does not contain a valid IngressClass"
+```
+
+**Step 3: Investigate Ingress Configuration**
+```bash
+# Check ingress resource details
+kubectl get ingress webapp-ingress -n webapp -o yaml
+
+# Check if ingressClassName is set
+kubectl get ingress webapp-ingress -n webapp -o jsonpath='{.spec.ingressClassName}'
+
+# If empty or missing, that's your problem!
+```
+
+**Step 4: Fix Missing IngressClass**
+
+The ingress controller requires `ingressClassName` to be specified. Without it, the controller ignores the ingress resource completely.
+
+```bash
+
+kubectl edit ingress webapp-ingress -n webapp
+# Add this line under spec:
+#   ingressClassName: nginx
+
+# Verify the fix
+kubectl get ingress webapp-ingress -n webapp -o yaml | grep ingressClassName
+```
+
+**Step 5: Test Again**
+```bash
+# Wait a moment for ingress controller to reload configuration
+sleep 5
+
+# Test the API endpoint
+INGRESS_PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
+curl -H "Host: webapp.local" http://localhost:$INGRESS_PORT/api/health
+
+# Should now return: {"status":"healthy"}
+```
+
+**Why This Happens:**
+- Kubernetes v1.18+ supports multiple ingress controllers
+- `ingressClassName` specifies which controller should handle the ingress
+- Without it, ingress-nginx controller v1.8.1+ ignores the ingress resource
+- Always check controller logs when ingress doesn't work!
+
 ### 5. Analyze Pod Logs for Troubleshooting
 
 **Important DevOps Skill**: Always check logs to verify applications are working correctly!
