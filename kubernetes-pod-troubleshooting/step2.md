@@ -4,6 +4,21 @@
 
 Now that you've identified the pod issues, it's time to fix the API pods and networking problems. In this step, you'll get the API pods running and ensure services can communicate properly.
 
+## What This Step Verifies
+
+The verification script (`verify-step2`) checks:
+1. ✅ **2 API pods Running** (both must be in Running state)
+2. ✅ **2 API pods Ready** (both must pass readiness checks)
+3. ✅ **4 Services exist**: api-service, frontend-service, postgres-service, redis-cache
+4. ✅ **api-service has endpoints** (must point to 2 API pod IPs)
+5. ✅ **api-service selector is correct** (must be `app: api`)
+
+**Note about endpoints:**
+- Only `api-service` endpoints are checked in this step
+- Frontend endpoints will be empty (pod needs ConfigMap - fixed in Step 4)
+- Postgres endpoints may be empty if pod is still Pending (fixed in Step 3)
+- Redis endpoints should already exist (pod is Running)
+
 ## Current Problems
 
 Multiple issues need to be resolved:
@@ -94,21 +109,25 @@ kubectl get endpoints <service-name> -n webapp
 
 ### 5. Verify All Required Services Exist
 
-The application architecture requires these services:
+**IMPORTANT:** The verification script requires **exactly 4 services** to exist:
+
+| Service Name | Port | TargetPort | Selector | Endpoints Required in Step 2? |
+|--------------|------|------------|----------|-------------------------------|
+| **api-service** | 3000 | 3000 | `app: api` | ✅ YES (must have 2 pod IPs) |
+| **frontend-service** | 80 | 80 | `app: frontend` | ⚠️ NO (pod not ready yet) |
+| **postgres-service** | 5432 | 5432 | `app: postgres` | ⚠️ MAYBE (depends if Step 3 done) |
+| **redis-cache** | 6379 | 6379 | `app: redis` | ✅ YES (already running) |
 
 ```bash
-# List current services
+# Check which services exist
 kubectl get svc -n webapp
 
-# Required services and their ports:
-# - API service: exposes port 3000 (for API pods)
-# - Frontend service: exposes port 80 (for nginx frontend)
-# - Database service: exposes port 5432 (for PostgreSQL)
-# - Redis cache: already exists ✅
+# Check which services have endpoints
+kubectl get endpoints -n webapp
 ```
 
 **If services are missing, create them with:**
-- Correct `selector` matching pod labels
+- Correct `selector` matching pod labels (check with `kubectl get pods --show-labels -n webapp`)
 - Appropriate `port` and `targetPort`
 - `type: ClusterIP` for internal communication
 
@@ -123,8 +142,8 @@ kubectl edit svc <service-name> -n webapp
 ```
 
 **Or use kubectl apply with YAML** - define Service with:
-- `metadata.name`: Service name
-- `spec.selector`: Must match pod labels
+- `metadata.name`: Service name (must match table above)
+- `spec.selector`: Must match pod labels exactly
 - `spec.ports`: Port mapping
 - `spec.type`: ClusterIP
 
@@ -144,24 +163,60 @@ kubectl get endpoints -n webapp
 kubectl describe endpoints api-service -n webapp
 ```
 
-## Expected Results
+## Expected Results - What Must Pass to Complete Step 2
 
-After completing this step:
-- ✅ API pods should be Running and healthy (2/2 ready)
-- ✅ API service should have valid endpoints (2 pod IPs)
-- ✅ postgres-service should have valid endpoints (1 pod IP from the Running postgres pod)
-- ✅ redis-cache should have valid endpoints (1 pod IP)
-- ⚠️ **frontend-service will have NO endpoints** (pod still ContainerCreating - ConfigMap created in Step 4)
-- ✅ DNS resolution should work between services
-- ✅ Service selectors should match pod labels
-- ⚠️ Frontend still ContainerCreating (will fix in Step 4)
-- ⚠️ Postgres may be Pending if PVC not created (will fix in Step 3)
+**To pass verification, you must have:**
+
+### ✅ Must Be Fixed:
+1. **2 API pods Running** - Check with: `kubectl get pods -n webapp -l app=api`
+2. **2 API pods Ready (1/1)** - Both containers must pass readiness checks
+3. **All 4 services exist:**
+   - `api-service` ✅
+   - `frontend-service` ✅
+   - `postgres-service` ✅
+   - `redis-cache` ✅ (already exists)
+4. **api-service has endpoints** - Must show 2 pod IPs: `kubectl get endpoints api-service -n webapp`
+5. **api-service selector is `app: api`** - Check with: `kubectl get svc api-service -n webapp -o yaml`
+
+### ⚠️ Expected to Still Be Broken (Will Fix Later):
+- **Frontend pod**: Still ContainerCreating (missing nginx-config ConfigMap - fixed in Step 4)
+- **Postgres pod**: May be Pending (missing PVC - fixed in Step 3)
+- **frontend-service endpoints**: Will be empty (pod not ready)
+- **postgres-service endpoints**: May be empty (pod may not be ready)
+
+### 📊 Service Endpoints Status Expected:
+```bash
+kubectl get endpoints -n webapp
+
+# Expected output after Step 2:
+NAME                 ENDPOINTS                           AGE
+api-service          10.244.0.x:3000,10.244.0.y:3000    Xm  ✅ HAS ENDPOINTS
+frontend-service     <none>                             Xm  ⚠️ EMPTY (OK for now)
+postgres-service     <none>                             Xm  ⚠️ EMPTY (OK for now)
+redis-cache          10.244.0.z:6379                    Xm  ✅ HAS ENDPOINTS
+```
+
+**Remember:** Only `api-service` endpoints are verified in Step 2!
 
 ## Verification Commands
 
+Run these commands to check if you're ready to pass Step 2:
+
 ```bash
-# Verify services have correct selectors and endpoints
-kubectl get svc,endpoints -n webapp
+# 1. Check API pods (must be 2 Running, 2 Ready)
+kubectl get pods -n webapp -l app=api
+
+# 2. Check all services exist (must be exactly 4)
+kubectl get svc -n webapp
+
+# 3. Check api-service has endpoints (must show 2 pod IPs)
+kubectl get endpoints api-service -n webapp
+
+# 4. Check api-service selector (must be app=api)
+kubectl get svc api-service -n webapp -o jsonpath='{.spec.selector}'; echo
+
+# 5. View all endpoints status
+kubectl get endpoints -n webapp
 
 # Test DNS resolution from API pod (using getent)
 kubectl exec -it deployment/api -n webapp -- getent hosts postgres-service
@@ -170,4 +225,19 @@ kubectl exec -it deployment/api -n webapp -- getent hosts postgres-service
 kubectl logs deployment/api -n webapp
 ```
 
-**Next**: Once services can communicate properly, proceed to fix storage and database issues.
+## Quick Troubleshooting Checklist
+
+Before running the verification script, check:
+
+- [ ] Did you apply the API ConfigMap? (`kubectl apply -f /root/k8s-app/configmaps/api-config.yaml`)
+- [ ] Are 2 API pods Running? (`kubectl get pods -n webapp -l app=api`)
+- [ ] Are 2 API pods Ready (1/1)?
+- [ ] Do you have exactly 4 services? (`kubectl get svc -n webapp | wc -l` should be 5 including header)
+- [ ] Does api-service exist? (`kubectl get svc api-service -n webapp`)
+- [ ] Does frontend-service exist? (`kubectl get svc frontend-service -n webapp`)
+- [ ] Does postgres-service exist? (`kubectl get svc postgres-service -n webapp`)
+- [ ] Does redis-cache service exist? (`kubectl get svc redis-cache -n webapp`)
+- [ ] Does api-service have 2 endpoints? (`kubectl get endpoints api-service -n webapp`)
+- [ ] Is api-service selector `app: api`? (`kubectl get svc api-service -n webapp -o yaml | grep -A2 selector`)
+
+**Next**: Once services can communicate properly, proceed to **Step 3** to fix storage and database issues.
