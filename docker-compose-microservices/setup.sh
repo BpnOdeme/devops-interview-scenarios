@@ -4,10 +4,10 @@ set -e
 
 echo "Starting setup of microservices environment..."
 
-# Skip dependency installation in Killercode (they're pre-installed)
-# These are only needed for local testing
-if [ "$KILLERCODE_ENVIRONMENT" != "true" ]; then
-    # Install Docker if not present
+# Skip dependency installation in Killercoda (they're pre-installed)
+# Docker and Docker Compose should already be available
+if [ "$KILLERCODA_ENVIRONMENT" != "true" ]; then
+    # Install Docker if not present (for local testing only)
     if ! command -v docker &> /dev/null; then
         echo "Installing Docker..."
         apt-get update -qq
@@ -20,14 +20,8 @@ if [ "$KILLERCODE_ENVIRONMENT" != "true" ]; then
         echo "Installing Docker Compose..."
         apt-get install -y docker-compose > /dev/null 2>&1
     fi
-
-    # Install Node.js for local testing
-    if ! command -v node &> /dev/null; then
-        echo "Installing Node.js..."
-        curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-        apt-get install -y nodejs > /dev/null 2>&1
-    fi
 fi
+# The API service runs in a Docker container with its own Node.js runtime
 
 # Create project directory
 mkdir -p /root/microservices
@@ -48,12 +42,14 @@ services:
       - frontend-net
     volumes:
       - ./html:/usr/share/nginx/html
-    
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+
   api:
     image: node:14-alpine
     ports:
       - "3000:3000"
     environment:
+      - NODE_ENV=production
       - DB_HOST=database
       - DB_PORT=3307
       - REDIS_HOST=redis-cache
@@ -63,10 +59,9 @@ services:
       - cache
     networks:
       - backend-net
-      - frontend
-    command: npm start
+    command: sh -c "npm install && npm start"
     working_dir: /app
-    
+
   db:
     image: mysql:8.0
     environment:
@@ -79,7 +74,7 @@ services:
       - db-net
     volumes:
       - db-data:/var/lib/mysql
-      
+
   cache:
     image: redis:6-alpine
     ports:
@@ -101,7 +96,6 @@ networks:
 volumes:
   db-data:
     driver: local
-  app-data:
 EOF
 
 # Create API directory with MISSING index.js file (intentional issue)
@@ -268,6 +262,7 @@ services:
     ports:
       - "3000:3000"
     environment:
+      - NODE_ENV=production
       - DB_HOST=db
       - DB_PORT=3306
       - DB_USER=appuser
@@ -283,7 +278,8 @@ services:
       - app-network
     volumes:
       - ./api:/app
-    command: npm start
+      - /app/node_modules
+    command: sh -c "cd /app && npm install && npm start"
     working_dir: /app
 
   db:
@@ -306,7 +302,9 @@ services:
       - "6379:6379"
     networks:
       - app-network
-    command: redis-server --requirepass secretpass
+    command: redis-server --requirepass secretpass --appendonly yes
+    volumes:
+      - cache-data:/data
 
 networks:
   app-network:
@@ -314,6 +312,8 @@ networks:
 
 volumes:
   db-data:
+    driver: local
+  cache-data:
     driver: local
 EOF
 

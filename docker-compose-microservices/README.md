@@ -1,237 +1,350 @@
-# Docker Compose Microservices Architecture
+# Docker Compose Microservices Troubleshooting
 
 ## Overview
-A comprehensive microservices architecture built with Node.js, featuring multiple services communicating through REST APIs and message queues.
+
+A comprehensive Docker Compose troubleshooting scenario designed to test middle-level DevOps engineering skills. This interactive challenge presents a completely broken microservices infrastructure that you must systematically diagnose and fix.
+
+## Scenario Background
+
+You've been assigned to investigate and repair a production-like Docker Compose deployment that was hastily abandoned by a previous team. The application consists of four services that should work together but currently nothing functions correctly.
 
 ## Architecture Components
 
 ### Services
-1. **API Gateway** (Port 3000)
-   - Central entry point for all client requests
-   - Routes requests to appropriate microservices
-   - Implements rate limiting and security headers
 
-2. **User Service** (Port 3001)
-   - User registration and authentication
-   - JWT token generation
-   - User profile management
-   - Session management with Redis
+1. **Frontend** (Nginx - Port 80)
+   - Serves static HTML content
+   - Reverse proxies API requests
+   - Entry point for user traffic
 
-3. **Product Service** (Port 3002)
-   - Product catalog management
-   - Inventory tracking
-   - Category management
-   - Product caching with Redis
+2. **API** (Node.js - Port 3000)
+   - Backend business logic service
+   - Connects to database and cache
+   - Provides REST API endpoints
+   - Health check monitoring
 
-4. **Order Service** (Port 3003)
-   - Order processing
-   - Payment status tracking
-   - Integration with Product Service for inventory
-   - Event publishing via RabbitMQ
+3. **Database** (MySQL 8.0 - Port 3306)
+   - Persistent data storage
+   - User and application database
+   - Credential-based authentication
 
-### Infrastructure
-- **MongoDB**: Primary database for all services
-- **Redis**: Caching and session management
-- **RabbitMQ**: Message queue for async communication
-- **Nginx**: Frontend web server and reverse proxy
+4. **Cache** (Redis 6 - Port 6379)
+   - Session management
+   - Data caching layer
+   - Password-protected access
 
-## Quick Start
+### Intended Architecture Diagram
 
-### Prerequisites
-- Docker and Docker Compose installed
-- Node.js 18+ (for local development)
-- 8GB RAM minimum recommended
+```
+┌─────────────────────────────────────────────────┐
+│           Docker Bridge Network                  │
+│                                                  │
+│   ┌─────────┐         ┌─────────┐              │
+│   │Frontend │◄───────►│   API   │              │
+│   │ nginx   │         │ node:14 │              │
+│   │ :80     │         │ :3000   │              │
+│   └─────────┘         └────┬─┬──┘              │
+│                            │ │                  │
+│                    ┌───────┘ └────────┐         │
+│                    ▼                  ▼         │
+│               ┌─────────┐        ┌────────┐    │
+│               │Database │        │ Cache  │    │
+│               │ MySQL   │        │ Redis  │    │
+│               │ :3306   │        │ :6379  │    │
+│               └─────────┘        └────────┘    │
+└─────────────────────────────────────────────────┘
+```
 
-### Installation
+## What's Broken
 
-1. Clone the repository:
+Multiple infrastructure and configuration issues prevent the stack from functioning:
+
+- ❌ **File Permissions**: docker-compose.yml is not accessible
+- ❌ **Network Configuration**: Services on incompatible networks cannot communicate
+- ❌ **Network Driver**: Incorrect driver for single-host deployment
+- ❌ **Environment Variables**: Service references don't match actual service names
+- ❌ **Port Mappings**: Wrong ports or reversed port mappings
+- ❌ **Database Credentials**: Missing or mismatched user configuration
+- ❌ **Volume Mounts**: Application code not properly mounted
+- ❌ **Nginx Configuration**: Proxy pointing to wrong service/port
+- ❌ **Pre-existing Networks**: Conflicting Docker networks
+
+## Challenge Structure
+
+### Step 1: Initial Investigation and Access
+- Fix file permission issues
+- Analyze the infrastructure setup
+- Identify configuration problems
+- Compare with reference configuration
+
+### Step 2: Fix Network Configuration
+- Resolve network isolation issues
+- Fix network driver incompatibility
+- Ensure proper service-to-service communication
+- Remove conflicting networks
+
+### Step 3: Fix Service Configuration
+- Correct environment variables
+- Fix port mappings
+- Configure database credentials
+- Fix nginx proxy configuration
+- Set up volume mounts
+
+### Step 4: Deploy and Test
+- Start the complete stack
+- Perform comprehensive testing
+- Validate end-to-end functionality
+- Verify inter-service communication
+
+## Difficulty Level
+
+**Target Audience**: Middle-Level DevOps Engineers
+**Estimated Time**: 30-40 minutes
+**Difficulty**: Intermediate
+
+### Skills Tested
+
+- Docker Compose configuration and troubleshooting
+- Container networking and service discovery
+- Environment variable management
+- Systematic debugging methodologies
+- Log analysis and interpretation
+- Configuration validation
+- End-to-end testing practices
+
+## Prerequisites
+
+### Required Knowledge
+- Docker and Docker Compose fundamentals
+- Basic Linux command line
+- Understanding of microservices architecture
+- Networking basics (DNS, ports, connectivity)
+- Text editing with nano or vim
+
+### System Requirements
+- Docker Engine 20.10+
+- Docker Compose 1.29+
+- Linux environment (or Ubuntu-based Killercoda)
+- 4GB RAM minimum
+- curl, grep, and basic Unix tools
+
+## Quick Start (Local Development)
+
+### 1. Clone the Repository
 ```bash
 git clone <repository-url>
 cd docker-compose-microservices
 ```
 
-2. Install dependencies for each service:
+### 2. Run Setup Script
 ```bash
-for service in api-gateway user-service product-service order-service; do
-  cd $service && npm install && cd ..
-done
+bash setup.sh
 ```
 
-3. Start the services:
+This creates a broken infrastructure at `/root/microservices/` with intentional issues to fix.
+
+### 3. Start Troubleshooting
 ```bash
-docker-compose up -d
+cd /root/microservices
+# Follow the step-by-step instructions in intro.md and stepX.md files
 ```
 
-4. Verify all services are running:
+### 4. Validate Your Fixes
 ```bash
-docker-compose ps
+# After each step, run the corresponding verification script
+bash verify-step1.sh
+bash verify-step2.sh
+bash verify-step3.sh
+bash verify-step4.sh
 ```
 
-5. Access the application:
-- Frontend: http://localhost
-- API Gateway: http://localhost:3000
-- RabbitMQ Management: http://localhost:15672 (guest/guest)
+## File Structure
+
+```
+docker-compose-microservices/
+├── README.md                    # This file
+├── intro.md                     # Scenario introduction
+├── step1.md                     # Investigation tasks
+├── step2.md                     # Network configuration fixes
+├── step3.md                     # Service configuration fixes
+├── step4.md                     # Deployment and testing
+├── finish.md                    # Completion summary
+├── setup.sh                     # Creates broken environment
+├── foreground.sh                # Killercoda startup script
+├── verify-step1.sh              # Validates Step 1
+├── verify-step2.sh              # Validates Step 2
+├── verify-step3.sh              # Validates Step 3
+├── verify-step4.sh              # Validates Step 4 (end-to-end)
+├── index.json                   # Killercoda configuration
+├── docker-compose.yml           # Working reference (for solution)
+├── docker-compose-reference.yml # Reference configuration
+├── api/
+│   ├── index.js                 # Node.js API code
+│   └── package.json             # Node.js dependencies
+├── nginx/
+│   └── default.conf             # Nginx configuration
+├── html/
+│   └── index.html               # Frontend HTML
+└── KILLERCODE_SOLUTION.md       # Detailed solution guide
+```
 
 ## API Endpoints
 
-### User Service
-- `POST /api/users/register` - Register new user
-- `POST /api/users/login` - User login
-- `GET /api/users` - List all users
-- `GET /api/users/:id` - Get user by ID
-- `PUT /api/users/:id` - Update user
-- `DELETE /api/users/:id` - Delete user
-
-### Product Service
-- `POST /api/products` - Create product
-- `GET /api/products` - List products (with pagination)
-- `GET /api/products/:id` - Get product by ID
-- `PUT /api/products/:id` - Update product
-- `PATCH /api/products/:id/stock` - Update stock
-- `DELETE /api/products/:id` - Soft delete product
-- `GET /api/categories` - List categories
-
-### Order Service
-- `POST /api/orders` - Create order
-- `GET /api/orders` - List orders (with pagination)
-- `GET /api/orders/:id` - Get order by ID
-- `PATCH /api/orders/:id/status` - Update order status
-- `PATCH /api/orders/:id/payment` - Update payment status
-- `GET /api/orders/user/:userId` - Get user's orders
-
-## Development
-
-### Running Services Locally
-```bash
-# Terminal 1 - MongoDB
-docker run -d -p 27017:27017 --name mongodb mongo:6
-
-# Terminal 2 - Redis
-docker run -d -p 6379:6379 --name redis redis:7-alpine
-
-# Terminal 3 - RabbitMQ
-docker run -d -p 5672:5672 -p 15672:15672 --name rabbitmq rabbitmq:3-management-alpine
-
-# Terminal 4-7 - Start each service
-cd api-gateway && npm start
-cd user-service && npm start
-cd product-service && npm start
-cd order-service && npm start
-```
-
-### Environment Variables
-Copy `.env.example` to `.env` and update values as needed:
-```bash
-cp .env.example .env
-```
-
-## Testing
+Once the stack is successfully deployed:
 
 ### Health Checks
-All services expose health endpoints:
 ```bash
-curl http://localhost:3000/health  # API Gateway
-curl http://localhost:3001/health  # User Service
-curl http://localhost:3002/health  # Product Service
-curl http://localhost:3003/health  # Order Service
+# API health check
+curl http://localhost:3000/health
+# Response: {"status":"healthy","service":"api"}
+
+# Frontend
+curl http://localhost/
+# Response: HTML content
 ```
 
-### Sample Test Flow
+### API Endpoints
 ```bash
-# 1. Create a user
-curl -X POST http://localhost:3000/api/users/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"testuser","email":"test@example.com","password":"password123"}'
+# Root endpoint
+curl http://localhost:3000/
+# Response: {"message":"API is running!"}
 
-# 2. Create a product
-curl -X POST http://localhost:3000/api/products \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Test Product","description":"Test description","price":99.99,"category":"Electronics","sku":"TEST001","stock":100}'
+# API endpoint
+curl http://localhost:3000/api
+# Response: {"message":"API is working!"}
 
-# 3. Create an order
-curl -X POST http://localhost:3000/api/orders \
-  -H "Content-Type: application/json" \
-  -d '{"userId":"<user-id>","userEmail":"test@example.com","items":[{"productId":"<product-id>","quantity":2}],"shippingAddress":{"street":"123 Main St","city":"Test City","zipCode":"12345","country":"USA"},"paymentMethod":"credit_card"}'
+# Frontend-proxied endpoint (critical test)
+curl http://localhost/api
+# Response: {"message":"API is working!"}
 ```
 
-## Monitoring
-
-### Logs
+### Database
 ```bash
-# View logs for all services
+# Test MySQL connection
+docker-compose exec db mysql -u appuser -papppass -e "SELECT 1;"
+```
+
+### Cache
+```bash
+# Test Redis connection
+docker-compose exec cache redis-cli -a secretpass ping
+# Response: PONG
+```
+
+## Troubleshooting Tips
+
+### Common Commands
+
+```bash
+# Validate YAML configuration
+docker-compose config
+
+# Check service status
+docker-compose ps
+
+# View logs
 docker-compose logs -f
 
-# View logs for specific service
-docker-compose logs -f user-service
+# View specific service logs
+docker-compose logs api
+
+# Check Docker networks
+docker network ls
+
+# Inspect a specific network
+docker network inspect microservices_app-network
+
+# Test connectivity between services
+docker-compose exec api ping -c 2 db
 ```
-
-### Service Status
-Access the frontend dashboard at http://localhost to view real-time service status and metrics.
-
-## Troubleshooting
 
 ### Common Issues
 
-1. **Services can't connect to MongoDB**
-   - Check MongoDB is running: `docker ps | grep mongodb`
-   - Verify network connectivity: `docker network ls`
+1. **Cannot read docker-compose.yml**
+   - Solution: Check file permissions with `ls -la`, fix with `chmod 644`
 
-2. **Redis connection errors**
-   - Check Redis is running: `docker ps | grep redis`
-   - Test connection: `docker exec -it redis redis-cli ping`
+2. **Services cannot communicate**
+   - Solution: Ensure services share at least one common Docker network
 
-3. **Port conflicts**
-   - Check for port usage: `netstat -tulpn | grep <port>`
-   - Modify ports in docker-compose.yml if needed
+3. **Wrong network driver**
+   - Solution: Use `bridge` driver for single-host deployments, not `overlay`
 
-4. **Memory issues**
-   - Increase Docker memory allocation
-   - Reduce service replicas
+4. **Database connection failures**
+   - Solution: Verify DB_HOST matches database service name, check credentials
 
-### Cleanup
-```bash
-# Stop all services
-docker-compose down
+5. **Frontend cannot reach API**
+   - Solution: Check nginx proxy_pass configuration, ensure correct service name and port
 
-# Remove volumes (WARNING: Deletes all data)
-docker-compose down -v
+## Success Criteria
 
-# Clean up everything
-docker system prune -a --volumes
-```
+Your troubleshooting is successful when:
 
-## Architecture Decisions
+- ✅ All 4 services are running (no Restarting/Exited states)
+- ✅ docker-compose.yml is readable and valid
+- ✅ All services can communicate over Docker network
+- ✅ Database accepts connections with correct credentials
+- ✅ Redis responds to authenticated ping
+- ✅ API health checks return healthy status
+- ✅ Frontend serves HTML content
+- ✅ Frontend successfully proxies /api requests to backend
+- ✅ All verification scripts pass
 
-### Technology Choices
-- **Node.js**: Lightweight, fast, perfect for microservices
-- **Express**: Minimal, flexible web framework
-- **MongoDB**: Document database for flexible schemas
-- **Redis**: High-performance caching and sessions
-- **RabbitMQ**: Reliable message queuing
-- **Docker Compose**: Simple orchestration for development
+## Solution
 
-### Design Patterns
-- **API Gateway Pattern**: Single entry point for clients
-- **Database per Service**: Each service owns its data
-- **Event-Driven Communication**: Async messaging via RabbitMQ
-- **Circuit Breaker**: Service resilience (via proxy middleware)
-- **Cache-Aside Pattern**: Redis caching for performance
+A complete solution with step-by-step fixes is available in `KILLERCODE_SOLUTION.md`. However, we strongly recommend attempting the challenge yourself first for maximum learning benefit.
 
-## Security Considerations
-- JWT authentication for API access
-- Password hashing with bcrypt
-- Rate limiting on API Gateway
-- Helmet.js for security headers
-- Environment-based configuration
-- Network isolation via Docker networks
+## Learning Outcomes
 
-## Performance Optimizations
-- Redis caching for frequently accessed data
-- MongoDB indexes for query optimization
-- Connection pooling for databases
-- Pagination for large datasets
-- Health checks for service monitoring
-- Graceful shutdown handling
+After completing this scenario, you will:
+
+- Understand Docker Compose networking in depth
+- Master systematic troubleshooting methodologies
+- Know how to debug multi-service applications
+- Understand environment variable configuration
+- Be proficient in reading and analyzing container logs
+- Know how to validate distributed system functionality
+- Understand service discovery and DNS in Docker
+- Be able to fix common Docker Compose configuration issues
+
+## Real-World Relevance
+
+This scenario simulates actual production issues:
+
+- **Configuration Drift**: Settings that worked before stop working after changes
+- **Network Isolation**: Services incorrectly segmented
+- **Credential Mismatches**: Hardcoded values that don't align
+- **Port Conflicts**: Wrong port mappings
+- **Missing Configurations**: Incomplete environment setup
+- **Proxy Misconfiguration**: Incorrect routing in reverse proxies
+
+DevOps engineers regularly encounter these issues in:
+- Development environment setup
+- Production deployments
+- Infrastructure migrations
+- Multi-team collaboration environments
+- Legacy system maintenance
+
+## Additional Resources
+
+### Docker Documentation
+- [Docker Compose Networking](https://docs.docker.com/compose/networking/)
+- [Docker Compose Environment Variables](https://docs.docker.com/compose/environment-variables/)
+- [Docker Compose File Reference](https://docs.docker.com/compose/compose-file/)
+
+### Related Scenarios
+- Kubernetes Pod Troubleshooting
+- Terraform State Management
+- Nginx Load Balancer Configuration
+- Jenkins Pipeline Debugging
+
+## Contributing
+
+Found an issue or have suggestions? Please open an issue or submit a pull request.
 
 ## License
-MIT
+
+MIT License - See LICENSE file for details
+
+---
+
+**Ready to start?** Run `bash setup.sh` and begin your troubleshooting journey!
