@@ -86,16 +86,34 @@ fi
 
 # Verify API can connect to database (check logs)
 echo "Checking API database connection in logs..."
-if docker-compose logs api 2>/dev/null | grep -qi "mysql.*error\|database.*error\|econnrefused.*3306"; then
+# Check for actual MySQL connection errors (not npm ERR! warnings)
+if docker-compose logs api 2>/dev/null | grep -qi "Error: connect ECONNREFUSED.*3306\|ENOTFOUND db\|ER_ACCESS_DENIED_ERROR\|Can't connect to MySQL"; then
     echo "API appears to have database connection errors. Check logs:"
+    docker-compose logs api | tail -20
+    exit 1
+fi
+
+# Verify API successfully connected to MySQL
+if ! docker-compose logs api 2>/dev/null | grep -q "Connected to MySQL database"; then
+    echo "API has not successfully connected to MySQL database"
+    echo "Expected to see: 'Connected to MySQL database' in logs"
     docker-compose logs api | tail -20
     exit 1
 fi
 
 # Verify API can connect to Redis (check logs)
 echo "Checking API Redis connection in logs..."
-if docker-compose logs api 2>/dev/null | grep -qi "redis.*error\|econnrefused.*6379"; then
+# Check for actual Redis connection errors (not npm ERR! warnings)
+if docker-compose logs api 2>/dev/null | grep -qi "Error: connect ECONNREFUSED.*6379\|ENOTFOUND cache\|Redis connection.*failed"; then
     echo "API appears to have Redis connection errors. Check logs:"
+    docker-compose logs api | tail -20
+    exit 1
+fi
+
+# Verify API successfully connected to Redis
+if ! docker-compose logs api 2>/dev/null | grep -q "Connected to Redis"; then
+    echo "API has not successfully connected to Redis"
+    echo "Expected to see: 'Connected to Redis' in logs"
     docker-compose logs api | tail -20
     exit 1
 fi
