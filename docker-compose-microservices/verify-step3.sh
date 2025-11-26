@@ -95,8 +95,11 @@ fi
 echo "Checking port mappings..."
 
 # Redis/cache port should be 6379:6379 (not reversed)
-if ! echo "$CONFIG" | grep -A 20 "^  cache:" | grep -E "6379.*6379|published.*6379.*target.*6379" > /dev/null; then
+CACHE_CONFIG=$(echo "$CONFIG" | grep -A 20 "^  cache:")
+if ! echo "$CACHE_CONFIG" | grep -q "published.*6379" || ! echo "$CACHE_CONFIG" | grep -q "target.*6379"; then
     echo "Redis port mapping should be 6379:6379 (host:container)"
+    echo "Current cache port configuration:"
+    echo "$CACHE_CONFIG" | grep -E "published|target" || echo "(no port mapping found)"
     exit 1
 fi
 
