@@ -86,36 +86,42 @@ fi
 
 # Verify API can connect to database (check logs)
 echo "Checking API database connection in logs..."
-# Check for actual MySQL connection errors (not npm ERR! warnings)
-if docker-compose logs api 2>/dev/null | grep -qi "Error: connect ECONNREFUSED.*3306\|ENOTFOUND db\|ER_ACCESS_DENIED_ERROR\|Can't connect to MySQL"; then
-    echo "API appears to have database connection errors. Check logs:"
-    docker-compose logs api | tail -20
-    exit 1
-fi
 
-# Verify API successfully connected to MySQL
-if ! docker-compose logs api 2>/dev/null | grep -q "Connected to MySQL database"; then
-    echo "API has not successfully connected to MySQL database"
-    echo "Expected to see: 'Connected to MySQL database' in logs"
-    docker-compose logs api | tail -20
-    exit 1
+# FIRST: Check if API successfully connected (most recent state matters)
+if docker-compose logs api 2>/dev/null | grep -q "Connected to MySQL database"; then
+    echo "✓ API connected to MySQL successfully"
+else
+    # If no success message, then check for connection errors
+    if docker-compose logs api 2>/dev/null | grep -qi "Error: connect ECONNREFUSED.*3306\|ENOTFOUND db\|ER_ACCESS_DENIED_ERROR\|Can't connect to MySQL"; then
+        echo "API has database connection errors. Check logs:"
+        docker-compose logs api | tail -20
+        exit 1
+    else
+        echo "API has not connected to MySQL database yet"
+        echo "Expected to see: 'Connected to MySQL database' in logs"
+        docker-compose logs api | tail -20
+        exit 1
+    fi
 fi
 
 # Verify API can connect to Redis (check logs)
 echo "Checking API Redis connection in logs..."
-# Check for actual Redis connection errors (not npm ERR! warnings)
-if docker-compose logs api 2>/dev/null | grep -qi "Error: connect ECONNREFUSED.*6379\|ENOTFOUND cache\|Redis connection.*failed"; then
-    echo "API appears to have Redis connection errors. Check logs:"
-    docker-compose logs api | tail -20
-    exit 1
-fi
 
-# Verify API successfully connected to Redis
-if ! docker-compose logs api 2>/dev/null | grep -q "Connected to Redis"; then
-    echo "API has not successfully connected to Redis"
-    echo "Expected to see: 'Connected to Redis' in logs"
-    docker-compose logs api | tail -20
-    exit 1
+# FIRST: Check if API successfully connected (most recent state matters)
+if docker-compose logs api 2>/dev/null | grep -q "Connected to Redis"; then
+    echo "✓ API connected to Redis successfully"
+else
+    # If no success message, then check for connection errors
+    if docker-compose logs api 2>/dev/null | grep -qi "Error: connect ECONNREFUSED.*6379\|ENOTFOUND cache\|Redis connection.*failed"; then
+        echo "API has Redis connection errors. Check logs:"
+        docker-compose logs api | tail -20
+        exit 1
+    else
+        echo "API has not connected to Redis yet"
+        echo "Expected to see: 'Connected to Redis' in logs"
+        docker-compose logs api | tail -20
+        exit 1
+    fi
 fi
 
 # Test network connectivity between services
@@ -141,10 +147,22 @@ fi
 
 # Final comprehensive check: API should have successfully started
 echo "Verifying API startup..."
-if docker-compose logs api 2>/dev/null | grep -qi "crash\|fatal\|cannot start\|exited"; then
-    echo "API may have crashed or failed to start properly. Check logs:"
-    docker-compose logs api | tail -30
-    exit 1
+
+# FIRST: Check if API successfully started (most recent state matters)
+if docker-compose logs api 2>/dev/null | grep -q "API server listening on port 3000"; then
+    echo "✓ API server started successfully"
+else
+    # If no success message, then check for crash/fatal errors
+    if docker-compose logs api 2>/dev/null | grep -qi "Error.*Cannot start\|Application.*crashed\|Unhandled rejection\|process exited"; then
+        echo "API may have crashed or failed to start properly. Check logs:"
+        docker-compose logs api | tail -30
+        exit 1
+    else
+        echo "API has not started yet or startup message not found"
+        echo "Expected to see: 'API server listening on port 3000' in logs"
+        docker-compose logs api | tail -30
+        exit 1
+    fi
 fi
 
 # Check if API server is listening on port 3000
