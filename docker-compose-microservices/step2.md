@@ -179,12 +179,18 @@ docker-compose config | grep -A 15 "frontend:" | grep -A 5 "networks:"
 docker-compose config | grep -A 15 "api:" | grep -A 5 "networks:"
 ```
 
-## Hints
+## Investigation Tips
 
-- In a simple microservices setup, having all services on a single `bridge` network is often the cleanest solution
-- Docker Compose automatically prefixes network names with the project name (e.g., `microservices_app-network`)
-- Service names in docker-compose.yml become DNS hostnames within the network
-- The `depends_on` directive doesn't ensure network connectivity; proper network configuration does
+- **Network topology**: Consider which services need to communicate and design accordingly
+- **Network drivers**: Research the differences between bridge, overlay, host, and none drivers
+- **Service discovery**: Learn how Docker Compose handles DNS resolution within networks
+- **Dependencies**: Understand that `depends_on` controls startup order, not network connectivity
+
+**Useful resources:**
+- Docker network documentation
+- Docker Compose networking guide
+- Research: "Docker bridge vs overlay network"
+- Command: `docker network inspect <network-name>`
 
 ## Expected Outcome
 

@@ -81,18 +81,24 @@ cat docker-compose.yml | grep -A 10 "cache:"
 
 ### 4. Check Port Mappings
 
-Port mappings follow the format `"host_port:container_port"`. Review all port mappings:
+Port mappings follow the format `"host_port:container_port"`. Review all port mappings for correctness:
 
-**Frontend**: Should map host port 80 to container port 80
-**API**: Should map host port 3000 to container port 3000
-**Database**: Should map host port 3306 to container port 3306
-**Cache**: Should map host port 6379 to container port 6379
-
-**Common mistake**: Reversing the ports (e.g., `"6379:6380"` instead of `"6379:6379"`)
-
+**Investigation steps:**
 ```bash
+# View all port mappings
 grep -E "^\s+ports:" docker-compose.yml -A 2
+
+# Check parsed configuration
+docker-compose config | grep -E "published|target" -B 2
+
+# Verify ports match between mappings and service expectations
 ```
+
+**Things to verify:**
+- Port mapping syntax is correct (format: `"host:container"`)
+- Host and container ports are not reversed
+- Port numbers match what the application expects
+- No port conflicts between services
 
 ### 5. Verify Volume Mounts
 
@@ -134,16 +140,23 @@ location /api {
 }
 ```
 
-**Investigate:**
-- What service name is referenced in `proxy_pass`?
-- Does it match the actual API service name in docker-compose.yml?
-- Is the port correct?
-- Remember: Within Docker networks, services use their service names as hostnames
+**Investigation approach:**
+1. Identify the service name referenced in `proxy_pass`
+2. Compare with service names defined in docker-compose.yml
+3. Verify the port number matches the API application's listening port
+4. Remember: Within Docker networks, services use their service names as DNS hostnames
 
-**Common issues:**
-- Wrong service name (e.g., `api-server` when it should be `api`)
-- Wrong port (e.g., `:3001` when it should be `:3000`)
-- Using `localhost` instead of the service name
+**Verification commands:**
+```bash
+# List all service names
+docker-compose config | grep -E "^  [a-z_-]+:" | tr -d ' :'
+
+# Check what port the API listens on
+grep -r "listen\|port" api/index.js
+
+# Test nginx configuration syntax
+docker run --rm -v $(pwd)/nginx:/etc/nginx/conf.d nginx:alpine nginx -t
+```
 
 ### 7. Verify Application Code Exists
 
@@ -204,18 +217,42 @@ volumes:
 
 Work through this systematically:
 
-- [ ] API's `DB_HOST` matches database service name
-- [ ] API's `DB_PORT` is correct (3306 for MySQL)
-- [ ] API has `DB_USER`, `DB_PASSWORD`, `DB_NAME` configured
-- [ ] Database service has `MYSQL_USER` defined
-- [ ] Database credentials match between API and DB service
-- [ ] API's `REDIS_HOST` matches cache service name
-- [ ] API's `REDIS_PORT` is correct (6379)
-- [ ] API's `REDIS_PASSWORD` matches Redis command line password
-- [ ] All port mappings are in correct `host:container` format
-- [ ] API code is mounted at `/app` via volumes
-- [ ] Nginx config `proxy_pass` uses correct service name and port
-- [ ] All required files exist (api/index.js, nginx/default.conf, etc.)
+**Service References:**
+- [ ] API's `DB_HOST` matches the database service name in docker-compose.yml
+- [ ] API's `REDIS_HOST` matches the cache service name in docker-compose.yml
+- [ ] Nginx's `proxy_pass` references the correct API service name
+
+**Port Configuration:**
+- [ ] API's `DB_PORT` matches the database container's exposed port
+- [ ] API's `REDIS_PORT` matches the cache container's exposed port
+- [ ] All port mappings use correct `host:container` format
+- [ ] Port numbers are consistent across all configurations
+
+**Environment Variables:**
+- [ ] API has all required database connection variables defined
+- [ ] API has all required cache connection variables defined
+- [ ] Database service has complete user configuration
+- [ ] Passwords and credentials match between services
+
+**File System:**
+- [ ] API application code is accessible via volume mounts
+- [ ] Nginx configuration files are properly mounted
+- [ ] All required application files exist and are readable
+
+**Verification Commands:**
+```bash
+# Check service names
+docker-compose config | grep -E "^  [a-z_-]+:"
+
+# Verify environment variables
+docker-compose config | grep -E "(DB_HOST|DB_PORT|REDIS_HOST|REDIS_PORT)" -A 1
+
+# Check port consistency
+docker-compose config | grep -E "published|target|ports" -A 2
+
+# Cross-reference credentials
+docker-compose config | grep -E "(DB_USER|DB_PASSWORD|MYSQL_USER|MYSQL_PASSWORD)" -A 1
+```
 
 ## Validation Commands
 
@@ -250,17 +287,31 @@ This step is intentionally complex because it mirrors real-world scenarios where
 A middle-level DevOps engineer should be able to:
 - Identify mismatches between configurations
 - Understand service dependencies
-- Know default ports for common services
+- Research service-specific requirements and defaults
 - Recognize proper Docker Compose syntax
+- Cross-reference multiple configuration sources
 
-## Hints
+## Investigation Resources
 
-- MySQL default port: **3306**
-- Redis default port: **6379**
-- Service names in docker-compose.yml become DNS hostnames
-- Environment variables in docker-compose.yml don't use quotes for values
-- The reference configuration at `/tmp/reference/` shows a working example
-- When in doubt, compare broken config with reference config
+- **Service documentation**: Check Docker Hub for official images (MySQL, Redis, Nginx)
+- **Default ports**: Research what ports each service typically uses
+- **Service discovery**: Service names in docker-compose.yml become DNS hostnames
+- **Environment variables**: Values don't use quotes in YAML format
+- **Configuration validation**: Use `docker-compose config` to parse and verify syntax
+- **Cross-referencing**: Compare API environment variables with service definitions
+
+**Research tips:**
+```bash
+# Find service documentation
+docker pull mysql:8.0
+docker inspect mysql:8.0 | grep -i "expose\|port"
+
+# Check what ports services expose
+docker-compose config | grep -A 10 "ports:"
+
+# Validate environment variable format
+docker-compose config | grep -E "environment:" -A 10
+```
 
 ## Expected Outcome
 

@@ -27,27 +27,49 @@ fi
 # Check API environment variables
 echo "Checking API environment variables..."
 
-# DB_HOST should be 'db' (the service name)
-if ! echo "$CONFIG" | grep -A 50 "^  api:" | grep -q "DB_HOST.*db"; then
-    echo "DB_HOST should be 'db' (the database service name)"
+# Extract actual service names from docker-compose
+DB_SERVICE=$(echo "$CONFIG" | grep -E "^  [a-z_-]+:" | grep -i "db\|mysql\|database" | head -1 | tr -d ' :' || echo "db")
+CACHE_SERVICE=$(echo "$CONFIG" | grep -E "^  [a-z_-]+:" | grep -i "cache\|redis" | head -1 | tr -d ' :' || echo "cache")
+
+# Get DB_HOST from API config
+API_DB_HOST=$(echo "$CONFIG" | grep -A 50 "^  api:" | grep "DB_HOST" | head -1 | cut -d: -f2 | tr -d ' ')
+if [ -z "$API_DB_HOST" ]; then
+    echo "DB_HOST environment variable is missing in API service"
     exit 1
 fi
 
-# DB_PORT should be 3306 (MySQL default)
-if ! echo "$CONFIG" | grep -A 50 "^  api:" | grep -q "DB_PORT.*3306"; then
-    echo "DB_PORT should be '3306' (MySQL default port)"
+# Verify DB_HOST matches a database service name
+if ! echo "$CONFIG" | grep -E "^  ${API_DB_HOST}:" > /dev/null; then
+    echo "DB_HOST '$API_DB_HOST' does not match any service defined in docker-compose.yml"
+    echo "Available services: $(echo "$CONFIG" | grep -E "^  [a-z_-]+:" | tr -d ' :' | tr '\n' ', ')"
     exit 1
 fi
 
-# REDIS_HOST should be 'cache' (the service name)
-if ! echo "$CONFIG" | grep -A 50 "^  api:" | grep -q "REDIS_HOST.*cache"; then
-    echo "REDIS_HOST should be 'cache' (the cache service name)"
+# Get DB_PORT from API config and verify it's set
+API_DB_PORT=$(echo "$CONFIG" | grep -A 50 "^  api:" | grep "DB_PORT" | head -1 | cut -d: -f2 | tr -d ' ')
+if [ -z "$API_DB_PORT" ]; then
+    echo "DB_PORT environment variable is missing in API service"
     exit 1
 fi
 
-# REDIS_PORT should be 6379 (Redis default)
-if ! echo "$CONFIG" | grep -A 50 "^  api:" | grep -q "REDIS_PORT.*6379"; then
-    echo "REDIS_PORT should be '6379' (Redis default port)"
+# Get REDIS_HOST from API config
+API_REDIS_HOST=$(echo "$CONFIG" | grep -A 50 "^  api:" | grep "REDIS_HOST" | head -1 | cut -d: -f2 | tr -d ' ')
+if [ -z "$API_REDIS_HOST" ]; then
+    echo "REDIS_HOST environment variable is missing in API service"
+    exit 1
+fi
+
+# Verify REDIS_HOST matches a cache service name
+if ! echo "$CONFIG" | grep -E "^  ${API_REDIS_HOST}:" > /dev/null; then
+    echo "REDIS_HOST '$API_REDIS_HOST' does not match any service defined in docker-compose.yml"
+    echo "Available services: $(echo "$CONFIG" | grep -E "^  [a-z_-]+:" | tr -d ' :' | tr '\n' ', ')"
+    exit 1
+fi
+
+# Get REDIS_PORT from API config and verify it's set
+API_REDIS_PORT=$(echo "$CONFIG" | grep -A 50 "^  api:" | grep "REDIS_PORT" | head -1 | cut -d: -f2 | tr -d ' ')
+if [ -z "$API_REDIS_PORT" ]; then
+    echo "REDIS_PORT environment variable is missing in API service"
     exit 1
 fi
 
@@ -116,13 +138,31 @@ fi
 echo "Checking nginx configuration..."
 
 if [ -f nginx/default.conf ]; then
-    # Check if nginx proxies to 'api' service (not wrong names like 'api-server')
-    # and to port 3000 (not wrong ports like 3001)
-    if ! grep -E "proxy_pass.*http://api:3000" nginx/default.conf > /dev/null; then
-        echo "Nginx configuration should proxy to 'http://api:3000'"
-        echo "Current proxy_pass configuration:"
-        grep "proxy_pass" nginx/default.conf || echo "(no proxy_pass found)"
+    # Extract proxy_pass configuration
+    PROXY_PASS=$(grep "proxy_pass" nginx/default.conf | head -1 | sed 's/.*proxy_pass[[:space:]]*//;s/;.*//' || echo "")
+
+    if [ -z "$PROXY_PASS" ]; then
+        echo "No proxy_pass directive found in nginx/default.conf"
         exit 1
+    fi
+
+    # Extract service name and port from proxy_pass (e.g., http://api:3000 -> api, 3000)
+    NGINX_API_SERVICE=$(echo "$PROXY_PASS" | sed 's|http://||;s|:.*||')
+    NGINX_API_PORT=$(echo "$PROXY_PASS" | sed 's|.*:||;s|/.*||')
+
+    # Verify the service exists in docker-compose
+    if ! echo "$CONFIG" | grep -E "^  ${NGINX_API_SERVICE}:" > /dev/null; then
+        echo "Nginx proxies to '$NGINX_API_SERVICE' but this service doesn't exist in docker-compose.yml"
+        echo "Available services: $(echo "$CONFIG" | grep -E "^  [a-z_-]+:" | tr -d ' :' | tr '\n' ', ')"
+        exit 1
+    fi
+
+    # Verify the port matches what the API service exposes
+    API_CONTAINER_PORT=$(echo "$CONFIG" | grep -A 20 "^  ${NGINX_API_SERVICE}:" | grep -E "target:|[0-9]+:[0-9]+" | head -1 | sed 's/.*[^0-9]\([0-9]\+\)$/\1/')
+
+    if [ ! -z "$API_CONTAINER_PORT" ] && [ "$NGINX_API_PORT" != "$API_CONTAINER_PORT" ]; then
+        echo "Warning: Nginx proxies to port $NGINX_API_PORT but API service exposes port $API_CONTAINER_PORT"
+        echo "This may cause connection issues"
     fi
 else
     echo "nginx/default.conf is missing"

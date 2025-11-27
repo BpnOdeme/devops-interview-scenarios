@@ -67,21 +67,7 @@ cat docker-compose.yml
 - Is application code properly mounted into containers?
 - Are persistent data volumes defined?
 
-### 5. Check the Reference Configuration
-
-Compare the broken configuration with the reference:
-
-```bash
-cat /tmp/reference/docker-compose-reference.yml
-```
-
-**Key comparison points:**
-- Network topology differences
-- Environment variable values
-- Port mappings
-- Service names and references
-
-### 6. Check Existing Docker Resources
+### 5. Check Existing Docker Resources
 
 See if there are any pre-existing Docker networks that might conflict:
 
@@ -91,7 +77,7 @@ docker network ls
 
 Look for networks with similar names or subnet ranges that might cause conflicts.
 
-### 7. Examine Application Structure
+### 6. Examine Application Structure
 
 Check what application files exist:
 
@@ -144,13 +130,28 @@ By the end of this step, you should:
 4. Understand which services need to communicate with each other
 5. Have a mental model of what needs to be fixed
 
-## Hints
+## Investigation Resources
 
-- File permissions in Linux are controlled by `chmod`. Common readable permissions include 644 (rw-r--r--) or 664 (rw-rw-r--)
-- In Docker Compose, services communicate using service names as DNS hostnames
-- The `depends_on` directive controls startup order but doesn't guarantee readiness
-- Network driver `overlay` requires Docker Swarm mode; `bridge` is for single-host setups
-- Port mappings follow the format `host:container`, not the reverse
+- **File permissions**: Research `chmod` command and Linux file permission modes
+- **Docker networking**: Learn how Docker Compose handles service discovery and DNS
+- **Service dependencies**: Understand the difference between startup order and readiness
+- **Network drivers**: Research Docker network driver types and their use cases
+- **Port mappings**: Check Docker Compose documentation for correct port mapping syntax
+
+**Useful commands:**
+```bash
+# Learn about chmod
+man chmod
+chmod --help
+
+# Understand Docker networks
+docker network --help
+docker network ls
+docker network inspect <network-name>
+
+# Validate configuration
+docker-compose config
+```
 
 ## Next Steps
 

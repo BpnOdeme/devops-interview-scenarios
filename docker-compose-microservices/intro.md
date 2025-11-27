@@ -37,7 +37,7 @@ You need to systematically diagnose and fix **all infrastructure and configurati
 
 ## Challenge Level
 
-**Difficulty**: Intermediate (Middle-Level DevOps Engineer)
+**Difficulty**: Intermediate
 **Time Estimate**: 30-40 minutes
 **Skills Required**:
 - Docker Compose configuration
@@ -55,7 +55,7 @@ You have full access to:
 - `curl` - Test HTTP endpoints
 - `nano/vim` - Edit configuration files
 - `ls/cat/grep` - Investigate files and logs
-- `/tmp/reference/` - Reference configuration for guidance
+- Docker Compose documentation and online resources
 
 ## Important Notes
 

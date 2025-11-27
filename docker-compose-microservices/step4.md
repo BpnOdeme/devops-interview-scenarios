@@ -305,10 +305,22 @@ docker-compose exec api ping -c 2 db
 ```
 
 **Common causes:**
-- Wrong `DB_HOST` (should be `db`)
-- Wrong `DB_PORT` (should be `3306`)
-- Wrong credentials
+- DB_HOST doesn't match database service name
+- DB_PORT doesn't match database container port
+- Incorrect credentials or missing environment variables
 - Database not ready yet (check db logs)
+
+**Investigation:**
+```bash
+# Check what database service is defined
+docker-compose config | grep -E "^  [a-z_-]+:" | grep -i "db\|mysql\|database"
+
+# Verify API's database configuration
+docker-compose config | grep -A 20 "^  api:" | grep -E "DB_"
+
+# Check database service ports
+docker-compose config | grep -A 15 "^  db:" | grep -E "ports|target|published"
+```
 
 ### Issue: Redis Connection Failed
 
@@ -319,9 +331,21 @@ docker-compose exec cache redis-cli -a secretpass ping
 ```
 
 **Common causes:**
-- Wrong `REDIS_HOST` (should be `cache`)
-- Wrong `REDIS_PASSWORD`
+- REDIS_HOST doesn't match cache service name
+- REDIS_PASSWORD doesn't match Redis command password
 - Redis not accepting connections
+
+**Investigation:**
+```bash
+# Check what cache service is defined
+docker-compose config | grep -E "^  [a-z_-]+:" | grep -i "cache\|redis"
+
+# Verify API's Redis configuration
+docker-compose config | grep -A 20 "^  api:" | grep -E "REDIS_"
+
+# Check Redis password in command
+docker-compose config | grep -A 10 "^  cache:" | grep -i "requirepass"
+```
 
 ### Issue: Frontend Cannot Reach API
 
@@ -392,13 +416,6 @@ This troubleshooting exercise mirrors real production scenarios where:
 - **Incorrect credentials** prevent database access
 - **Port conflicts** prevent services from starting
 - **Volume mount issues** prevent code from running
-
-As a middle-level DevOps engineer, you should be comfortable:
-- Diagnosing multi-service failures
-- Understanding Docker networking
-- Reading and interpreting logs
-- Testing distributed systems
-- Validating end-to-end functionality
 
 ## Next Steps
 

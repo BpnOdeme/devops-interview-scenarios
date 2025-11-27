@@ -10,5 +10,5 @@ if [ -r /root/microservices/docker-compose.yml ]; then
     fi
 fi
 
-echo "Please fix the permissions on docker-compose.yml (chmod 644)"
+echo "docker-compose.yml is not readable. Check and fix file permissions"
 exit 1

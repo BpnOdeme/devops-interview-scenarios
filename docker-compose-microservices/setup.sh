@@ -27,7 +27,7 @@ fi
 mkdir -p /root/microservices
 cd /root/microservices
 
-# Create BROKEN docker-compose.yml with multiple issues
+# Create docker-compose.yml for microservices stack
 cat > docker-compose.yml <<'EOF'
 version: '3.8'
 
@@ -195,7 +195,7 @@ process.on('SIGTERM', () => {
 });
 EOF
 
-# Create nginx config with wrong upstream
+# Create frontend HTML directory
 mkdir -p html
 cat > html/index.html <<'EOF'
 <!DOCTYPE html>
@@ -210,7 +210,7 @@ cat > html/index.html <<'EOF'
 </html>
 EOF
 
-# Create nginx config that references wrong API endpoint
+# Create nginx reverse proxy configuration
 mkdir -p nginx
 cat > nginx/default.conf <<'EOF'
 server {
@@ -236,86 +236,8 @@ docker network create backend-net --subnet=172.20.0.0/16 2>/dev/null || true
 # Set wrong permissions on docker-compose.yml
 chmod 000 docker-compose.yml
 
-# Create a reference file for students
-mkdir -p /tmp/reference
-cat > /tmp/reference/docker-compose-reference.yml <<'EOF'
-# Reference Docker Compose Configuration
-# This is a working example for a microservices architecture
-
-version: '3.8'
-
-services:
-  frontend:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-    depends_on:
-      - api
-    networks:
-      - app-network
-    volumes:
-      - ./html:/usr/share/nginx/html
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-
-  api:
-    image: node:14-alpine
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DB_USER=appuser
-      - DB_PASSWORD=apppass
-      - DB_NAME=appdb
-      - REDIS_HOST=cache
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=secretpass
-    depends_on:
-      - db
-      - cache
-    networks:
-      - app-network
-    volumes:
-      - ./api:/app
-      - /app/node_modules
-    command: sh -c "cd /app && npm install && npm start"
-    working_dir: /app
-
-  db:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: secret
-      MYSQL_DATABASE: appdb
-      MYSQL_USER: appuser
-      MYSQL_PASSWORD: apppass
-    ports:
-      - "3306:3306"
-    networks:
-      - app-network
-    volumes:
-      - db-data:/var/lib/mysql
-
-  cache:
-    image: redis:6-alpine
-    ports:
-      - "6379:6379"
-    networks:
-      - app-network
-    command: redis-server --requirepass secretpass --appendonly yes
-    volumes:
-      - cache-data:/data
-
-networks:
-  app-network:
-    driver: bridge
-
-volumes:
-  db-data:
-    driver: local
-  cache-data:
-    driver: local
-EOF
+# Reference configuration removed to encourage independent troubleshooting
+# Students should investigate and fix issues using Docker Compose documentation
 
 echo ""
 echo "=========================================="

@@ -75,7 +75,7 @@ Multiple infrastructure and configuration issues prevent the stack from function
 - Fix file permission issues
 - Analyze the infrastructure setup
 - Identify configuration problems
-- Compare with reference configuration
+- Document all discovered issues
 
 ### Step 2: Fix Network Configuration
 - Resolve network isolation issues
@@ -176,8 +176,6 @@ docker-compose-microservices/
 ├── verify-step3.sh              # Validates Step 3
 ├── verify-step4.sh              # Validates Step 4 (end-to-end)
 ├── index.json                   # Killercoda configuration
-├── docker-compose.yml           # Working reference (for solution)
-├── docker-compose-reference.yml # Reference configuration
 ├── api/
 │   ├── index.js                 # Node.js API code
 │   └── package.json             # Node.js dependencies
